@@ -122,6 +122,11 @@ class Simple_File_Manager {
 		 */
 		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'public/class-simple-file-manager-public.php';
 
+		/**
+		 * Include CodeStar framework
+		 */
+		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'vendor/codestar-framework/codestar-framework.php';
+
 		$this->loader = new Simple_File_Manager_Loader();
 
 	}
@@ -144,6 +149,27 @@ class Simple_File_Manager {
 	}
 
 	/**
+	 * Check if current screen is this plugin's main page
+	 *
+	 * @since 1.0.0
+	 */
+	public function is_sfm() {
+
+		$request_uri = $_SERVER['REQUEST_URI']; // e.g. /wp-admin/tools.php?page=simple-file-manager
+
+		if ( strpos( $request_uri, 'tools.php?page=' . $this->plugin_name ) !== false ) {
+
+			return true; // Yes, this is the plugin's main page
+
+		} else {
+
+			return false; // No, this is not the plugin's main page
+
+		}
+
+	}
+
+	/**
 	 * Register all of the hooks related to the admin area functionality
 	 * of the plugin.
 	 *
@@ -156,6 +182,20 @@ class Simple_File_Manager {
 
 		$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_styles' );
 		$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_scripts' );
+
+		$this->loader->add_action( 'admin_menu', $plugin_admin, 'sfm_remove_codestar_submenu' );
+
+		if ( is_admin() && $this->is_sfm() ) {
+
+			$this->loader->add_action( 'csf_loaded', $plugin_admin, 'sfm_main_page' );
+
+		} else {
+
+			$this->loader->add_action( 'admin_menu', $plugin_admin, 'sfm_register_submenu' );
+
+		}
+
+		$this->loader->add_filter( 'plugin_action_links_'.$this->plugin_name.'/'.$this->plugin_name.'.php', $plugin_admin, 'sfm_plugin_action_links' );
 
 	}
 

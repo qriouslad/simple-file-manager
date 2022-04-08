@@ -2,3 +2,42 @@
  * All of the CSS for your admin-specific functionality should be
  * included in this file.
  */
+
+.sfm-options .csf-header-inner {
+    background-color: #fafafa;
+    border-bottom: 1px solid #f5f5f5;
+}
+
+.csf-theme-dark.sfm-options .csf-header-inner h1 {
+    color:  #23282d;
+}
+
+.sfm-options .csf-header-inner h1 small {
+    font-size: 14px;
+}
+
+.sfm-options .csf-buttons {
+    display: none;
+}
+
+.sfm-options .csf-header a {
+    text-decoration: none;
+    transition: .25s;
+}
+
+.sfm-options .sfm-header-action span {
+    font-size: 1.125em;
+}
+
+.sfm-options .csf-header a:hover {
+    text-decoration: underline;
+}
+
+.sfm-options .sfm-header-action {
+    line-height: 30px;
+    margin-left: 16px;
+}
+
+.sfm-options .sfm-header-action:first-child {
+    margin-left: 0;
+}
