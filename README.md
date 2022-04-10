@@ -2,7 +2,7 @@
 
 Contributors: qriouslad  
 Donate link: https://paypal.me/qriouslad
-Tags: file manager, file browser, directory browser  
+Tags: file manager, file viewer, code viewer, developer  
 Requires at least: 4.8  
 Tested up to: 5.9.2  
 Stable tag: 2.4.0  
@@ -12,11 +12,15 @@ License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
 ![](.wordpress-org/banner-772x250.png)
 
-Lightweight file manager with a clean and fast UI
+Lightweight file manager focusing as a file/code viewer with syntax highlighting
 
 ## Description
 
-This plugin is based on [Simple File Manager](https://github.com/jcampbell1/simple-file-manager), a single-file PHP-based file manager.
+Simple File Manager allows you to swiftly browse through the directories and files in your WordPress installation. A good alternative for [File Manager](https://wordpress.org/plugins/wp-file-manager/), [Filester - File Manager Pro](https://wordpress.org/plugins/filester/), [Advanced File Manager](https://wordpress.org/plugins/file-manager-advanced/) if your primary focus is viewing directory content and the code in files for your dev work. 
+
+At v1.0.0, this plugin primarily works as a code viewer for WordPress core, theme and plugin files. It uses [prism.js](https://prismjs.com/) to highlight code syntax in files commonly used throughout the WordPress development cycle such as PHP, HTML, Javascript, CSS, JSON and Markdown.
+
+Simple File Manager is based on the [Simple File Manager](https://github.com/jcampbell1/simple-file-manager) library by [John Campbell](https://github.com/jcampbell1).
 
 ### Give Back
 
@@ -29,6 +33,8 @@ This plugin is based on [Simple File Manager](https://github.com/jcampbell1/simp
 
 1. The file manager
    ![The file manager](.wordpress-org/screenshot-1.png)
+2. The file/code viewer
+   ![The file/code viewer](.wordpress-org/screenshot-2.png)
 
 ## Frequently Asked Questions
 
