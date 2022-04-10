@@ -1,4 +1,4 @@
-# System Dashboard
+# Simple File Manager
 
 Contributors: qriouslad  
 Donate link: https://paypal.me/qriouslad
