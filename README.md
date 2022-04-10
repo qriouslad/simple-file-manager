@@ -5,7 +5,7 @@ Donate link: https://paypal.me/qriouslad
 Tags: file manager, file viewer, code viewer, developer  
 Requires at least: 4.8  
 Tested up to: 5.9.2  
-Stable tag: 2.4.0  
+Stable tag: 1.0.0  
 Requires PHP: 5.6  
 License: GPLv2 or later  
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -16,9 +16,7 @@ Lightweight file manager focusing as a file/code viewer with syntax highlighting
 
 ## Description
 
-Simple File Manager allows you to swiftly browse through the directories and files in your WordPress installation. A good alternative for [File Manager](https://wordpress.org/plugins/wp-file-manager/), [Filester - File Manager Pro](https://wordpress.org/plugins/filester/), [Advanced File Manager](https://wordpress.org/plugins/file-manager-advanced/) if your primary focus is viewing directory content and the code in files for your dev work. 
-
-At v1.0.0, this plugin primarily works as a code viewer for WordPress core, theme and plugin files. It uses [prism.js](https://prismjs.com/) to highlight code syntax in files commonly used throughout the WordPress development cycle such as PHP, HTML, Javascript, CSS, JSON and Markdown.
+Simple File Manager allows you to swiftly browse through the directories and files in your WordPress installation. A good alternative for [File Manager](https://wordpress.org/plugins/wp-file-manager/), [Filester - File Manager Pro](https://wordpress.org/plugins/filester/) and [Advanced File Manager](https://wordpress.org/plugins/file-manager-advanced/) if your primary focus is viewing directory content and the code in files for your dev work. It uses [prism.js](https://prismjs.com/) to highlight code syntax in files commonly used throughout the WordPress development cycle such as PHP, HTML, Javascript, CSS, JSON and Markdown files.
 
 Simple File Manager is based on the [Simple File Manager](https://github.com/jcampbell1/simple-file-manager) library by [John Campbell](https://github.com/jcampbell1).
 
