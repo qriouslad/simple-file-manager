@@ -79,7 +79,9 @@ class Simple_File_Manager_Admin {
 
 			wp_enqueue_style( $this->plugin_name . '-codemirror', plugin_dir_url( __FILE__ ) . 'css/codemirror/codemirror.css', array(), $this->version, 'all' );
 
-			wp_enqueue_style( $this->plugin_name . '-codemirror-theme-lesser-dark', plugin_dir_url( __FILE__ ) . 'css/codemirror/theme/lesser-dark.css', array(), $this->version, 'all' );
+			// wp_enqueue_style( $this->plugin_name . '-codemirror-theme-lesser-dark', plugin_dir_url( __FILE__ ) . 'css/codemirror/theme/lesser-dark.css', array(), $this->version, 'all' );
+
+			wp_enqueue_style( $this->plugin_name . '-codemirror-theme-material-ocean', plugin_dir_url( __FILE__ ) . 'css/codemirror/theme/material-ocean.css', array(), $this->version, 'all' );
 
 			wp_enqueue_style( $this->plugin_name . '-codemirror-addon-foldgutter', plugin_dir_url( __FILE__ ) . 'css/codemirror/addon/foldgutter.css', array(), $this->version, 'all' );
 
@@ -112,8 +114,6 @@ class Simple_File_Manager_Admin {
 
 			// Modes - Languages
 
-			wp_enqueue_script( $this->plugin_name . '-codemirror-clike', plugin_dir_url( __FILE__ ) . 'js/codemirror/mode/clike.js', array( $this->plugin_name . '-codemirror' ), $this->version, false );
-
 			wp_enqueue_script( $this->plugin_name . '-codemirror-htmlmixed', plugin_dir_url( __FILE__ ) . 'js/codemirror/mode/htmlmixed.js', array( $this->plugin_name . '-codemirror' ), $this->version, false );
 
 			wp_enqueue_script( $this->plugin_name . '-codemirror-xml', plugin_dir_url( __FILE__ ) . 'js/codemirror/mode/xml.js', array( $this->plugin_name . '-codemirror' ), $this->version, false );
@@ -121,6 +121,10 @@ class Simple_File_Manager_Admin {
 			wp_enqueue_script( $this->plugin_name . '-codemirror-javascript', plugin_dir_url( __FILE__ ) . 'js/codemirror/mode/javascript.js', array( $this->plugin_name . '-codemirror' ), $this->version, false );
 
 			wp_enqueue_script( $this->plugin_name . '-codemirror-css', plugin_dir_url( __FILE__ ) . 'js/codemirror/mode/css.js', array( $this->plugin_name . '-codemirror' ), $this->version, false );
+
+			wp_enqueue_script( $this->plugin_name . '-codemirror-markdown', plugin_dir_url( __FILE__ ) . 'js/codemirror/mode/markdown.js', array( $this->plugin_name . '-codemirror' ), $this->version, false );
+
+			wp_enqueue_script( $this->plugin_name . '-codemirror-clike', plugin_dir_url( __FILE__ ) . 'js/codemirror/mode/clike.js', array( $this->plugin_name . '-codemirror' ), $this->version, false );
 
 			wp_enqueue_script( $this->plugin_name . '-codemirror-php', plugin_dir_url( __FILE__ ) . 'js/codemirror/mode/php.js', array( $this->plugin_name . '-codemirror' ), $this->version, false );
 
@@ -286,60 +290,30 @@ class Simple_File_Manager_Admin {
 	        $filename = '/' . str_replace( ABSPATH, '', $file );
 	        $file_extension = pathinfo( $file, PATHINFO_EXTENSION );
 
-	        switch ( $file_extension ) {
-
-	        	case 'php':
-	        		$language = 'php';
-	        		break;
-
-	        	case 'html':
-	        		$language = 'markup';
-	        		break;
-
-	        	case 'xml':
-	        		$language = 'markup';
-	        		break;
-
-	        	case 'svg':
-	        		$language = 'markup';
-	        		break;
-
-	        	case 'js':
-	        		$language = 'javascript';
-	        		break;
-
-	        	case 'css':
-	        		$language = 'css';
-	        		break;
-
-	        	case 'md':
-	        		$language = 'markdown';
-	        		break;
-
-	        	case 'json':
-	        		$language = 'json';
-	        		break;
-
-	        	case 'lock':
-	        		$language = 'json';
-	        		break;
-
-	        	case 'po':
-	        		$language = 'markup';
-	        		break;
-
-	        	case 'txt':
-	        		$language = 'markup';
-	        		break;
-
-	        	case 'htaccess':
-	        		$language = 'markup';
-	        		break;
-
-	        	case '':
-	        		$language = 'markup';
-	        		break;
-
+	        if ( $file_extension == 'php' ) {
+        		$mode = 'application/x-httpd-php';
+	        } elseif ( $file_extension == 'html' ) {
+        		$mode = 'text/html';
+	        } elseif ( $file_extension == 'xml' ) {
+        		$mode = 'application/xml';
+	        } elseif ( $file_extension == 'svg' ) {
+        		$mode = 'application/xml';
+	        } elseif ( $file_extension == 'js' ) {
+        		$mode = 'application/javascript';
+	        } elseif ( $file_extension == 'css' ) {
+        		$mode = 'text/css';
+	        } elseif ( $file_extension == 'md' ) {
+        		$mode = 'text/x-markdown';
+	        } elseif ( $file_extension == 'json' ) {
+        		$mode = 'application/json';
+	        } elseif ( $file_extension == 'lock' ) {
+        		$mode = 'application/json';
+	        } elseif ( $file_extension == 'txt' ) {
+        		$mode = 'text/plain';
+	        } elseif ( $file_extension == 'htaccess' ) {
+        		$mode = '.htaccess';
+	        } else {
+        		$mode = 'text/plain';
 	        }
 
 		} elseif ( ( isset( $_GET['do'] ) ) && ( $_GET['do'] == 'download' ) ) {
@@ -432,9 +406,8 @@ class Simple_File_Manager_Admin {
 							        var code = document.getElementById("codemirror");
 							        var editor = CodeMirror.fromTextArea(code, {
 							        	'.$read_only.'
-							        	mode: "application/x-httpd-php",
-							        	// mode: "text/x-php",
-							        	theme: "lesser-dark",
+							        	mode: "'.$mode.'",
+							        	theme: "material-ocean",
 							        	lineNumbers: true,
 							        	lineWrapping: true,
 							        	extraKeys: {"Ctrl-Q": function(cm){ cm.foldCode(cm.getCursor()); }},
