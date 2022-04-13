@@ -149,6 +149,44 @@
 		  $('.edit-success').fadeOut( 1000 );
 		}, 2000);
 
+		$('.upload-button').on('click', function(e) {
+			e.preventDefault();
+			$('.action-inputs').show();
+			$('.action-upload').show();
+			$('.action-newfile').hide();			
+			$('.action-newfolder').hide();
+			$('.cancel-upload').show();
+			$('.cancel-newfile').hide();
+			$('.cancel-newfolder').hide();
+		});
+
+		$('.newfile-button').on('click', function(e) {
+			e.preventDefault();
+			$('.action-inputs').show();
+			$('.action-upload').hide();
+			$('.action-newfile').show();			
+			$('.action-newfolder').hide();			
+			$('.cancel-upload').hide();
+			$('.cancel-newfile').show();
+			$('.cancel-newfolder').hide();
+		});
+
+		$('.newfolder-button').on('click', function(e) {
+			e.preventDefault();
+			$('.action-inputs').show();
+			$('.action-upload').hide();
+			$('.action-newfile').hide();			
+			$('.action-newfolder').show();			
+			$('.cancel-upload').hide();
+			$('.cancel-newfile').hide();
+			$('.cancel-newfolder').show();
+		});
+
+		$('.cancel-action').on('click', function(e) {
+			e.preventDefault();
+			$('.action-inputs').hide();
+		});
+
 	});
 
 })( jQuery );

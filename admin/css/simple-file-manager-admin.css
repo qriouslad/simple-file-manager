@@ -95,6 +95,37 @@
     margin-left: 0;
 }
 
+.sfm .action-inputs {
+    width: 100%;
+    box-sizing: border-box;
+    background: #FAFBFC;
+    border: 1px solid #E3E8EE;
+    padding: 16px;
+    margin-bottom: 12px;
+}
+
+.sfm .action-inputs input[type="text"] {
+    margin-right: 8px;
+    width: 15em;
+}
+
+.sfm .cancel-action {
+    margin-left: 8px;
+}
+.sfm .action-inputs,
+.sfm .action-upload,
+.sfm .action-newfile,
+.sfm .action-newfolder,
+.sfm .cancel-action {
+    display: none;
+}
+
+.sfm .action-upload,
+.sfm .action-newfile,
+.sfm .action-newfolder {
+    text-align: right;
+}
+
 .sfm .icon-upload {
     display: inline-block;
     transform: rotate(270deg);

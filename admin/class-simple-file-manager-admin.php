@@ -349,8 +349,21 @@ class Simple_File_Manager_Admin {
 
 			$html_output .= '<div id="top">
 								<div id="breadcrumb">&nbsp;</div>
-								<div class="action-buttons"><button class="button action"><span class="icon-upload">&#10132;</span> Upload</button><button class="button action">&#10010; File</button><button class="button action">&#10010; Folder</button></div>
+								<div class="action-buttons">
+									<button class="button action upload-button"><span class="icon-upload">&#10132;</span> Upload</button><button class="button action newfile-button">&#10010; File</button><button class="button action newfolder-button">&#10010; Folder</button>
+								</div>
 							</div> 
+							<div class="action-inputs">
+								<div class="action-upload">
+									<input type="file" name="new-upload" id="new-upload"><button class="button action button-primary">Upload Now</button><button class="button action cancel-action cancel-upload">Cancel</button>
+								</div>
+								<div class="action-newfile">
+									<input type="text" name="new-filename" id="new-filename" value="" placeholder="e.g. filename.php"><button class="button action button-primary">Create File</button><button class="button action cancel-action cancel-newfile">Cancel</button>
+								</div>
+								<div class="action-newfolder">
+									<input type="text" name="new-filename" id="new-foldername" value="" placeholder="e.g. folder-name"><button class="button action button-primary">Create Folder</button><button class="button action cancel-action cancel-newfolder">Cancel</button>
+								</div>
+								</div>
 							<table id="table"><thead><tr>
 								<th>Name</th>
 								<th>Actions</th>
