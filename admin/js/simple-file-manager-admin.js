@@ -91,15 +91,15 @@
 			pathArr = relPath.split('%2F'),
 			currentLocation = pathArr.slice(-1)[0];
 
-		if ( path ) {
+		// if ( path ) {
 
 			var $html = $('<div/>').addClass('breadcrumb-links').append( $('<a href=#>Home</a></div>') );
 
-		} else {
+		// } else {
 
-			var $html = '<div class="breadcrumb-links">&nbsp;</div>';
+			// var $html = '<div class="breadcrumb-links">&nbsp;</div>';
 
-		}
+		// }
 
 		$.each(pathArr,function(k,v){
 			if(v) {

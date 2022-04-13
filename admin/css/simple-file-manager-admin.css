@@ -48,12 +48,21 @@
 
 /* Simple File Manager */
 
+.sfm .csf-field {
+    padding: 25px;
+}
+
 .sfm .csf-field.fmbody {
     padding-top: 0;
 }
 
 .sfm #top {
+    display: flex;
     height:auto;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin: 8px 0;
 }
 
 .sfm #breadcrumb { 
@@ -67,6 +76,28 @@
 
 .sfm .breadcrumb-links {
     min-height: 20px;
+}
+
+.sfm #breadcrumb {
+    width: 77%;
+}
+
+.sfm .action-buttons {
+    width: 23%;
+    max-width: 226px;
+}
+
+.sfm .action-buttons button {
+    margin-left: 8px;
+}
+
+.sfm .action-buttons button:first-child {
+    margin-left: 0;
+}
+
+.sfm .icon-upload {
+    display: inline-block;
+    transform: rotate(270deg);
 }
 
 .sfm .back-step {

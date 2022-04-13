@@ -349,7 +349,8 @@ class Simple_File_Manager_Admin {
 
 			$html_output .= '<div id="top">
 								<div id="breadcrumb">&nbsp;</div>
-							</div>
+								<div class="action-buttons"><button class="button action"><span class="icon-upload">&#10132;</span> Upload</button><button class="button action">&#10010; File</button><button class="button action">&#10010; Folder</button></div>
+							</div> 
 							<table id="table"><thead><tr>
 								<th>Name</th>
 								<th>Actions</th>
