@@ -12,7 +12,7 @@ License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
 ![](.wordpress-org/banner-772x250.png)
 
-Lightweight file manager focusing as a file/code viewer with syntax highlighting
+Lightweight file manager focusing as a file/code viewer with syntax highlighting.
 
 ## Description
 
@@ -25,7 +25,7 @@ Simple File Manager is based on the [Simple File Manager](https://github.com/jca
 * [A nice review](https://wordpress.org/plugins/tiny-file-manager/#reviews) would be great!
 * [Give feedback](https://wordpress.org/support/plugin/tiny-file-manager/) and help improve future versions.
 * [Github repo](https://github.com/qriouslad/tiny-file-manager) to contribute code.
-* [Donate](https://paypal.me/qriouslad) and support my work. Close to 200 dev hours have been spent towards v2.0.0 so far.
+* [Donate](https://paypal.me/qriouslad) and support my work.
 
 ## Screenshots
 

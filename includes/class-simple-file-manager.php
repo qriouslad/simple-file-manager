@@ -155,7 +155,8 @@ class Simple_File_Manager {
 	 */
 	public function is_sfm() {
 
-		$request_uri = $_SERVER['REQUEST_URI']; // e.g. /wp-admin/tools.php?page=simple-file-manager
+		// e.g. https://www.domain.com/wp-admin/tools.php?page=simple-file-manager
+		$request_uri = sanitize_text_field( $_SERVER['REQUEST_URI'] );
 
 		if ( strpos( $request_uri, 'tools.php?page=' . $this->plugin_name ) !== false ) {
 
