@@ -75,7 +75,17 @@ class Simple_File_Manager_Admin {
 
 		wp_enqueue_style( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'css/simple-file-manager-admin.css', array(), $this->version, 'all' );
 
-		wp_enqueue_style( $this->plugin_name . '-prism', plugin_dir_url( __FILE__ ) . 'css/prism.css', array(), $this->version, 'all' );
+		if ( ( isset( $_GET['do'] ) ) && ( ( $_GET['do'] == 'view' ) || ( $_GET['do'] == 'edit' ) ) ) {
+
+			wp_enqueue_style( $this->plugin_name . '-codemirror', plugin_dir_url( __FILE__ ) . 'css/codemirror/codemirror.css', array(), $this->version, 'all' );
+
+			// wp_enqueue_style( $this->plugin_name . '-codemirror-theme-lesser-dark', plugin_dir_url( __FILE__ ) . 'css/codemirror/theme/lesser-dark.css', array(), $this->version, 'all' );
+
+			wp_enqueue_style( $this->plugin_name . '-codemirror-theme-material-ocean', plugin_dir_url( __FILE__ ) . 'css/codemirror/theme/material-ocean.css', array(), $this->version, 'all' );
+
+			wp_enqueue_style( $this->plugin_name . '-codemirror-addon-foldgutter', plugin_dir_url( __FILE__ ) . 'css/codemirror/addon/foldgutter.css', array(), $this->version, 'all' );
+
+		}
 
 	}
 
@@ -98,7 +108,43 @@ class Simple_File_Manager_Admin {
 		 * class.
 		 */
 
-		wp_enqueue_script( $this->plugin_name . '-prism', plugin_dir_url( __FILE__ ) . 'js/prism.js', array( 'jquery' ), $this->version, false );
+		if ( ( isset( $_GET['do'] ) ) && ( ( $_GET['do'] == 'view' ) || ( $_GET['do'] == 'edit' ) ) ) {
+
+			wp_enqueue_script( $this->plugin_name . '-codemirror', plugin_dir_url( __FILE__ ) . 'js/codemirror/codemirror.min.js', array( 'jquery' ), $this->version, false );
+
+			// Modes - Languages
+
+			wp_enqueue_script( $this->plugin_name . '-codemirror-htmlmixed', plugin_dir_url( __FILE__ ) . 'js/codemirror/mode/htmlmixed.js', array( $this->plugin_name . '-codemirror' ), $this->version, false );
+
+			wp_enqueue_script( $this->plugin_name . '-codemirror-xml', plugin_dir_url( __FILE__ ) . 'js/codemirror/mode/xml.js', array( $this->plugin_name . '-codemirror' ), $this->version, false );
+
+			wp_enqueue_script( $this->plugin_name . '-codemirror-javascript', plugin_dir_url( __FILE__ ) . 'js/codemirror/mode/javascript.js', array( $this->plugin_name . '-codemirror' ), $this->version, false );
+
+			wp_enqueue_script( $this->plugin_name . '-codemirror-css', plugin_dir_url( __FILE__ ) . 'js/codemirror/mode/css.js', array( $this->plugin_name . '-codemirror' ), $this->version, false );
+
+			wp_enqueue_script( $this->plugin_name . '-codemirror-markdown', plugin_dir_url( __FILE__ ) . 'js/codemirror/mode/markdown.js', array( $this->plugin_name . '-codemirror' ), $this->version, false );
+
+			wp_enqueue_script( $this->plugin_name . '-codemirror-clike', plugin_dir_url( __FILE__ ) . 'js/codemirror/mode/clike.js', array( $this->plugin_name . '-codemirror' ), $this->version, false );
+
+			wp_enqueue_script( $this->plugin_name . '-codemirror-php', plugin_dir_url( __FILE__ ) . 'js/codemirror/mode/php.js', array( $this->plugin_name . '-codemirror' ), $this->version, false );
+
+			// Addon - Fold
+
+			wp_enqueue_script( $this->plugin_name . '-codemirror-fold-brace-fold', plugin_dir_url( __FILE__ ) . 'js/codemirror/addon/fold/brace-fold.js', array( $this->plugin_name . '-codemirror' ), $this->version, false );
+
+			wp_enqueue_script( $this->plugin_name . '-codemirror-fold-comment-fold', plugin_dir_url( __FILE__ ) . 'js/codemirror/addon/fold/comment-fold.js', array( $this->plugin_name . '-codemirror' ), $this->version, false );
+
+			wp_enqueue_script( $this->plugin_name . '-codemirror-fold-foldcode', plugin_dir_url( __FILE__ ) . 'js/codemirror/addon/fold/foldcode.js', array( $this->plugin_name . '-codemirror' ), $this->version, false );
+			
+			wp_enqueue_script( $this->plugin_name . '-codemirror-fold-foldgutter', plugin_dir_url( __FILE__ ) . 'js/codemirror/addon/fold/foldgutter.js', array( $this->plugin_name . '-codemirror' ), $this->version, false );
+
+			wp_enqueue_script( $this->plugin_name . '-codemirror-fold-indent-fold', plugin_dir_url( __FILE__ ) . 'js/codemirror/addon/fold/indent-fold.js', array( $this->plugin_name . '-codemirror' ), $this->version, false );
+
+			wp_enqueue_script( $this->plugin_name . '-codemirror-fold-markdown-fold', plugin_dir_url( __FILE__ ) . 'js/codemirror/addon/fold/markdown-fold.js', array( $this->plugin_name . '-codemirror' ), $this->version, false );
+
+			wp_enqueue_script( $this->plugin_name . '-codemirror-fold-xml-fold', plugin_dir_url( __FILE__ ) . 'js/codemirror/addon/fold/xml-fold.js', array( $this->plugin_name . '-codemirror' ), $this->version, false );
+
+		}
 
 		wp_enqueue_script( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'js/simple-file-manager-admin.js', array( 'jquery' ), $this->version, false );
 
@@ -127,22 +173,23 @@ class Simple_File_Manager_Admin {
 		// must be in UTF-8 or `basename` doesn't work
 		setlocale(LC_ALL,'en_US.UTF-8');
 
-		if(!$_COOKIE['_sfm_xsrf'])
-			setcookie('_sfm_xsrf',bin2hex(openssl_random_pseudo_bytes(16)));
-		if($_POST) {
-			if($_COOKIE['_sfm_xsrf'] !== $_POST['xsrf'] || !$_POST['xsrf'])
-				$this->err(403,"XSRF Failure");
-		}
+		// Set WordPress root path
+
+		$abspath = rtrim( ABSPATH, '/' ); // remove trailing slash
+		$abspath_hash = urlencode( $abspath );
+
+		// Set the directory/file path
 
 		if ( isset( $_REQUEST['file'] ) ) {
 
-			$abspath = rtrim( ABSPATH, '/' );
-			$abspath_hash = urlencode( $abspath );
-			$file = $_REQUEST['file'] ? $_REQUEST['file'] : $abspath;
+			$file_path = sanitize_text_field( $_REQUEST['file'] );
+
+			$file = $file_path ? $file_path : $abspath;
 
 		}
 
 		if ( ( isset( $_GET['do'] ) ) && ( $_GET['do'] == 'list' ) ) {
+		// Return list of directories and files data for frontend AJAX request
 
 			if ( is_dir( $file ) ) {
 
@@ -156,7 +203,7 @@ class Simple_File_Manager_Admin {
 					$path = preg_replace('@^\./@', '', $i);
 					$mime_type = $this->get_mime_type( $path );
 
-					if ( ( strpos( $mime_type, 'text' ) !== false ) || ( strpos( $mime_type, 'php' ) !== false ) || ( strpos( $mime_type, 'json' ) !== false ) || ( strpos( $mime_type, 'html' ) !== false ) ) {
+					if ( ( strpos( $mime_type, 'text' ) !== false ) || ( strpos( $mime_type, 'php' ) !== false ) || ( strpos( $mime_type, 'json' ) !== false ) || ( strpos( $mime_type, 'html' ) !== false ) || ( strpos( $mime_type, 'empty' ) !== false ) ) {
 						$is_viewable = true;
 					} else {
 						$is_viewable = false;						
@@ -202,6 +249,73 @@ class Simple_File_Manager_Admin {
 			]);
 			exit;
 
+		} elseif ( ( isset( $_GET['do'] ) ) && ( ( $_GET['do'] == 'view' ) || ( $_GET['do'] == 'edit' ) ) ) {
+
+			if ( isset( $_POST['submit'] ) ) {
+
+				$current_content = file_get_contents( $file );
+
+				$new_content = wp_unslash( $_POST['editor-content'] );
+
+				file_put_contents( $file, $new_content );
+
+				$success_message = '<div class="edit-success"><p>File edited successfully. You can continue editing.</p></div>';
+
+			} else {
+
+				$success_message = '';
+
+			}
+
+			if ( empty( file_get_contents( $file ) ) ) {
+
+				if ( $_GET['do'] == 'view' ) {
+
+					$editor_content = 'This file is empty';
+
+				} elseif ( $_GET['do'] == 'edit' ) {
+
+			        $editor_content = 'Start editing here...';
+
+				}
+
+			} else {
+
+		        // $content = htmlentities( file_get_contents( $file ) );
+
+		        $editor_content = esc_textarea( file_get_contents( $file ) );
+
+			}
+
+	        $filename = '/' . str_replace( ABSPATH, '', $file );
+	        $file_extension = pathinfo( $file, PATHINFO_EXTENSION );
+
+	        if ( $file_extension == 'php' ) {
+        		$mode = 'application/x-httpd-php';
+	        } elseif ( $file_extension == 'html' ) {
+        		$mode = 'text/html';
+	        } elseif ( $file_extension == 'xml' ) {
+        		$mode = 'application/xml';
+	        } elseif ( $file_extension == 'svg' ) {
+        		$mode = 'application/xml';
+	        } elseif ( $file_extension == 'js' ) {
+        		$mode = 'application/javascript';
+	        } elseif ( $file_extension == 'css' ) {
+        		$mode = 'text/css';
+	        } elseif ( $file_extension == 'md' ) {
+        		$mode = 'text/x-markdown';
+	        } elseif ( $file_extension == 'json' ) {
+        		$mode = 'application/json';
+	        } elseif ( $file_extension == 'lock' ) {
+        		$mode = 'application/json';
+	        } elseif ( $file_extension == 'txt' ) {
+        		$mode = 'text/plain';
+	        } elseif ( $file_extension == 'htaccess' ) {
+        		$mode = '.htaccess';
+	        } else {
+        		$mode = 'text/plain';
+	        }
+
 		} elseif ( ( isset( $_GET['do'] ) ) && ( $_GET['do'] == 'download' ) ) {
 
 			foreach( $disallowed_patterns as $pattern ) {
@@ -216,115 +330,94 @@ class Simple_File_Manager_Admin {
 
 			$filename = basename($file);
 			$finfo = finfo_open(FILEINFO_MIME_TYPE);
+			$http_referer = sanitize_url( $_SERVER['HTTP_REFERER'] );
 
 			header('Content-Type: ' . finfo_file($finfo, $file));
 			header('Content-Length: '. filesize($file));
 			header(sprintf('Content-Disposition: attachment; filename=%s',
-				strpos('MSIE',$_SERVER['HTTP_REFERER']) ? rawurlencode($filename) : "\"$filename\"" ));
+				strpos('MSIE',$http_referer) ? rawurlencode($filename) : "\"$filename\"" ));
 			ob_flush();
 			readfile($file);
 
 			exit;
 
-		} elseif ( ( isset( $_GET['do'] ) ) && ( $_GET['do'] == 'view' ) ) {
-
-	        $content = htmlentities( file_get_contents( $file ) );
-
-	        $filename = '/' . str_replace( ABSPATH, '', $file );
-	        $file_extension = pathinfo( $file, PATHINFO_EXTENSION );
-
-	        switch ( $file_extension ) {
-
-	        	case 'php':
-	        		$language = 'php';
-	        		break;
-
-	        	case 'html':
-	        		$language = 'markup';
-	        		break;
-
-	        	case 'xml':
-	        		$language = 'markup';
-	        		break;
-
-	        	case 'svg':
-	        		$language = 'markup';
-	        		break;
-
-	        	case 'js':
-	        		$language = 'javascript';
-	        		break;
-
-	        	case 'css':
-	        		$language = 'css';
-	        		break;
-
-	        	case 'md':
-	        		$language = 'markdown';
-	        		break;
-
-	        	case 'json':
-	        		$language = 'json';
-	        		break;
-
-	        	case 'lock':
-	        		$language = 'json';
-	        		break;
-
-	        	case 'po':
-	        		$language = 'markup';
-	        		break;
-
-	        	case 'txt':
-	        		$language = 'markup';
-	        		break;
-
-	        	case '':
-	        		$language = 'markup';
-	        		break;
-
-	        }
-
-	        if ( isset( $language ) ) {
-
-	        	$code_class = ' class="language-' . $language . ' match-braces"';
-
-	        } else {
-
-	        	$code_class = ' class="match-braces"';
-
-	        }
-
 		} else {}
 
 		$html_output = '';
 
-		if ( empty( $content ) ) {
+		if ( ! isset( $_GET['do'] ) ) {
 
 			$html_output .= '<div id="top">
 								<div id="breadcrumb">&nbsp;</div>
 							</div>
 							<table id="table"><thead><tr>
 								<th>Name</th>
+								<th>Actions</th>
 								<th>Size</th>
 								<th>Modified</th>
 								<th>Permissions</th>
-								<th>Actions</th>
 							</tr></thead><tbody id="list"></tbody></table>';
 
-		} else {
+		} elseif ( ( isset( $_GET['do'] ) ) && ( ( $_GET['do'] == 'view' ) || ( $_GET['do'] == 'edit' ) ) ) {
+
+			if ( $_GET['do'] == 'view' ) {
+
+				// $read_only = 'readOnly: "nocursor",';
+				$read_only = 'readOnly: true,';
+				$do_is = 'viewing';
+
+			} elseif ( $_GET['do'] == 'edit' ) {
+
+				$read_only = 'readOnly: false,';
+				$do_is = 'editing';
+
+			}
+
+			if ( !empty( $success_message ) ) {
+
+				$html_output .= $success_message;
+
+			}
 
 			$html_output .= '<div class="viewer-nav viewer-top">
-									<a href="#" class="back-step" onclick="window.history.back()"><span>&#10132;</span>Back</a><span class="viewing">You are viewing <span class="filename">' . $filename . '</span></span>
+								<a href="#" class="back-step" onclick="window.history.back()"><span>&#10132;</span>Back</a><span class="viewing">You are ' . $do_is . ' <span class="filename">' . $filename . '</span></span>
 							</div>';
 
-			$html_output .= '<div id="viewer-content"><pre class="line-numbers"><code' . $code_class . '>'. $content .'</code></pre></div>';
+			if ( $_GET['do'] == 'view' ) {
+
+				$html_output .= '<div id="editor-content"><textarea id="codemirror" rows="25">' . $editor_content . '</textarea></div>';
+
+			} elseif ( $_GET['do'] == 'edit' ) {
+
+				$html_output .= '<div id="editor-content"><form method="post">
+									<textarea id="codemirror" name="editor-content" rows="25">' . $editor_content . '</textarea>
+									<input type="submit" name="submit" value="Update File" class="button button-primary" />
+								</form></div>';
+
+			}
 
 			$html_output .= '<div class="viewer-nav viewer-bottom">
 									<a href="#" class="back-step" onclick="window.history.back()"><span>&#10132;</span>Back</a>
 							</div>';
 
-		}
+			$html_output .= '<script>
+								jQuery(document).ready( function() {
+							        // CodeMirror editor
+							        var code = document.getElementById("codemirror");
+							        var editor = CodeMirror.fromTextArea(code, {
+							        	'.$read_only.'
+							        	mode: "'.$mode.'",
+							        	theme: "material-ocean",
+							        	lineNumbers: true,
+							        	lineWrapping: true,
+							        	extraKeys: {"Ctrl-Q": function(cm){ cm.foldCode(cm.getCursor()); }},
+							        	foldGutter: true,
+							        	gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"]
+							        });
+								});
+							</script>';
+
+		} else {}
 
 		return $html_output;
 
@@ -420,22 +513,16 @@ class Simple_File_Manager_Admin {
 	 */
 	public function get_mime_type( $file_path ) {
 
-	    if (function_exists('finfo_open')) {
+	    if ( function_exists('finfo_open') ) {
 
-	        $finfo = finfo_open(FILEINFO_MIME_TYPE);
-	        $mime = finfo_file($finfo, $file_path);
-	        finfo_close($finfo);
+	        $finfo = finfo_open( FILEINFO_MIME_TYPE );
+	        $mime = finfo_file( $finfo, $file_path );
+	        finfo_close( $finfo );
 	        return $mime;
 
-	    } elseif (function_exists('mime_content_type')) {
+	    } elseif ( function_exists( 'mime_content_type' ) ) {
 
-	        return mime_content_type($file_path);
-
-	    } elseif (!stristr(ini_get('disable_functions'), 'shell_exec')) {
-
-	        $file = escapeshellarg($file_path);
-	        $mime = shell_exec('file -bi ' . $file);
-	        return $mime;
+	        return mime_content_type( $file_path );
 
 	    } else {
 
@@ -466,7 +553,7 @@ class Simple_File_Manager_Admin {
 				'menu_parent'		=> 'tools.php',
 				'menu_position'		=> 1,
 				'framework_title' 	=> 'Simple File Manager <small>by <a href="https://bowo.io" target="_blank">bowo.io</a></small>',
-				'framework_class' 	=> 'sfm-options',
+				'framework_class' 	=> 'sfm',
 				'show_bar_menu' 	=> false,
 				'show_search' 		=> false,
 				'show_reset_all' 	=> false,

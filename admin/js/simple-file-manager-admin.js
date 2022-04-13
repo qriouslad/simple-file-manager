@@ -58,31 +58,28 @@
 
 	function renderFileRow(data) {
 
-		var $filename_link = $('<a class="name" />')
-			.attr('href', data.is_dir ? '#' + encodeURIComponent(data.path) : '../' + data.relpath)
-			.text(data.name);
-		var allow_direct_link = true;
-	    	if (!data.is_dir && !allow_direct_link)  $link.css('pointer-events','none');
-		var $dl_link = $('<a/>').attr('href','?page=simple-file-manager&do=download&file='+ encodeURIComponent(data.path))
-			.addClass('download').text('Download');
-		// var $view_link = $('<a/>').attr('href','?page=simple-file-manager&do=view&file='+ encodeURIComponent(data.path))
-			// .addClass('view').text('View');
+		// var $dl_link = $('<a/>').attr('href','?page=simple-file-manager&do=download&file='+ encodeURIComponent(data.path))
+			// .addClass('download').text('Download');
+
 		var $filename_view_link = $('<a class="name" />')
 			.attr('href', data.is_dir ? '#' + encodeURIComponent(data.path) : ( data.is_viewable ? '?page=simple-file-manager&do=view&file='+ encodeURIComponent(data.path) : '../' + data.relpath ) )
 			.text(data.name);
+		var $view_link = '<a href="?page=simple-file-manager&amp;do=view&amp;file=' + encodeURIComponent(data.path) + '" class="view">View</a>';			
+		var $edit_link = '<a href="?page=simple-file-manager&amp;do=edit&amp;file='+ encodeURIComponent(data.path) + '" class="edit">Edit</a>';
+		var $view_edit = $view_link + $edit_link;
 		var perms = [];
+
 		if(data.is_readable) perms.push('Read');
 		if(data.is_writable) perms.push('Write');
 		if(data.is_executable) perms.push('Exec');
+
 		var $html = $('<tr />')
 			.addClass(data.is_dir ? 'is_dir' : '')
 			.append( $('<td class="first" />').append($filename_view_link) )
-			.append( $('<td/>').attr('data-sort',data.is_dir ? -1 : data.size)
-				.html($('<span class="size" />').text(formatFileSize(data.size))) )
-			.append( $('<td/>').attr('data-sort',data.mtime).text(formatTimestamp(data.mtime)) )
+			.append( $('<td/>').append( data.is_viewable ? $view_edit : '' ) )
+			.append( $('<td/>').html($('<span class="size" />').text(formatFileSize(data.size))) )
+			.append( $('<td/>').text(formatTimestamp(data.mtime)) )
 			.append( $('<td/>').text(perms.join('+')) )
-			.append( $('<td/>').append($dl_link) )
-			// .append( $('<td/>').append($dl_link).append( data.is_viewable ? $view_link : '' ) )
 		return $html;
 
 	}
@@ -95,8 +92,6 @@
 			currentLocation = pathArr.slice(-1)[0];
 
 		if ( path ) {
-
-			// var $html = '<div id="breadcrumb-links"><a href="#" class="back-home"><span>&#8962;</span>Home</a><a href="#" class="back-step" onclick="window.history.back()"><span>&#10132;</span>Back</a><div class="current-location"><span>/' + currentLocation + ' - ' + abspath + '</span></div></div>';
 
 			var $html = $('<div/>').addClass('breadcrumb-links').append( $('<a href=#>Home</a></div>') );
 
@@ -138,13 +133,21 @@
 
 	$(document).ready( function() {
 
+		// Remove default CodeStar buttons
+		$('.csf-form-result').remove();
+		$('.csf-buttons').remove();
+
         var addReview = '<a href="https://wordpress.org/plugins/simple-file-manager/#reviews" target="_blank" class="header-action"><span>&starf;</span> Review</a>';
         var giveFeedback = '<a href="https://wordpress.org/support/plugin/simple-file-manager/" target="_blank" class="header-action">&#10010; Feedback</a>';
         var donate = '<a href="https://paypal.me/qriouslad" target="_blank" class="header-action">&#10084; Donate</a>';
 
-        $(donate).prependTo('.csf-header-right');
-        $(giveFeedback).prependTo('.csf-header-right');
-        $(addReview).prependTo('.csf-header-right');
+        $(donate).prependTo('.sfm .csf-header-right');
+        $(giveFeedback).prependTo('.sfm .csf-header-right');
+        $(addReview).prependTo('.sfm .csf-header-right');
+
+		setTimeout(function(){
+		  $('.edit-success').fadeOut( 1000 );
+		}, 2000);
 
 	});
 

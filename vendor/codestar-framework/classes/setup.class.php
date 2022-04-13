@@ -12,7 +12,7 @@ if ( ! class_exists( 'CSF' ) ) {
 
     // Default constants
     public static $premium  = false;
-    public static $version  = '2.2.6';
+    public static $version  = '2.2.7';
     public static $dir      = '';
     public static $url      = '';
     public static $css      = '';
@@ -750,10 +750,6 @@ if ( ! class_exists( 'CSF' ) ) {
 
       if ( ! empty( $field_type ) ) {
 
-        if ( ! empty( $field['fancy_title'] ) ) {
-          echo '<div class="csf-fancy-title">' . $field['fancy_title'] .'</div>';
-        }
-
         if ( ! empty( $field['title'] ) ) {
           echo '<div class="csf-title">';
           echo '<h4>'. $field['title'] .'</h4>';
@@ -761,7 +757,7 @@ if ( ! class_exists( 'CSF' ) ) {
           echo '</div>';
         }
 
-        echo ( ! empty( $field['title'] ) || ! empty( $field['fancy_title'] ) ) ? '<div class="csf-fieldset">' : '';
+        echo ( ! empty( $field['title'] ) ) ? '<div class="csf-fieldset">' : '';
 
         $value = ( ! isset( $value ) && isset( $field['default'] ) ) ? $field['default'] : $value;
         $value = ( isset( $field['value'] ) ) ? $field['value'] : $value;
@@ -779,7 +775,7 @@ if ( ! class_exists( 'CSF' ) ) {
         echo '<p>'. esc_html__( 'Field not found!', 'csf' ) .'</p>';
       }
 
-      echo ( ! empty( $field['title'] ) || ! empty( $field['fancy_title'] ) ) ? '</div>' : '';
+      echo ( ! empty( $field['title'] ) ) ? '</div>' : '';
       echo '<div class="clear"></div>';
       echo '</div>';
 

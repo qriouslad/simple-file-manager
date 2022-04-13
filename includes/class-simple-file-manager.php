@@ -155,7 +155,8 @@ class Simple_File_Manager {
 	 */
 	public function is_sfm() {
 
-		$request_uri = $_SERVER['REQUEST_URI']; // e.g. /wp-admin/tools.php?page=simple-file-manager
+		// e.g. https://www.domain.com/wp-admin/tools.php?page=simple-file-manager
+		$request_uri = sanitize_text_field( $_SERVER['REQUEST_URI'] );
 
 		if ( strpos( $request_uri, 'tools.php?page=' . $this->plugin_name ) !== false ) {
 
@@ -180,12 +181,12 @@ class Simple_File_Manager {
 
 		$plugin_admin = new Simple_File_Manager_Admin( $this->get_plugin_name(), $this->get_version() );
 
-		$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_styles' );
-		$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_scripts' );
-
 		$this->loader->add_action( 'admin_menu', $plugin_admin, 'sfm_remove_codestar_submenu' );
 
 		if ( is_admin() && $this->is_sfm() ) {
+
+			$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_styles' );
+			$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_scripts' );
 
 			$this->loader->add_action( 'csf_loaded', $plugin_admin, 'sfm_main_page' );
 
