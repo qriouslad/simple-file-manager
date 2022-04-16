@@ -158,268 +158,388 @@ class Simple_File_Manager_Admin {
 	 */
 	public function sfm_index() {
 
-		//Disable error report for undefined superglobals
-		error_reporting( error_reporting() & ~E_NOTICE );
+		// Limit file manager access only to site admins
+		if ( current_user_can( 'manage_options' ) ) {
 
-		// Security options
-		$allow_show_folders = true; // Set to false to hide all subdirectories
+			//Disable error report for undefined superglobals
+			error_reporting( error_reporting() & ~E_NOTICE );
 
-		// Matching files not allowed to be uploaded. Must be an array.
-		$disallowed_patterns = []; // e.g. ['*.php']  
+			// Security options
+			$allow_show_folders = true; // Set to false to hide all subdirectories
 
-		// Matching files hidden in directory index
-		$hidden_patterns = []; // e.g. ['*.php','.*']
+			// Matching files not allowed to be uploaded. Must be an array.
+			$disallowed_patterns = []; // e.g. ['*.php']  
 
-		// must be in UTF-8 or `basename` doesn't work
-		setlocale(LC_ALL,'en_US.UTF-8');
+			// Matching files hidden in directory index
+			$hidden_patterns = []; // e.g. ['*.php','.*']
 
-		// Set WordPress root path
+			// must be in UTF-8 or `basename` doesn't work
+			setlocale(LC_ALL,'en_US.UTF-8');
 
-		$abspath = rtrim( ABSPATH, '/' ); // remove trailing slash
-		$abspath_hash = urlencode( $abspath );
+			// Set WordPress root path
 
-		// Set the directory/file path
+			$abspath = rtrim( ABSPATH, '/' ); // remove trailing slash
+			$abspath_hash = urlencode( $abspath );
 
-		if ( isset( $_REQUEST['file'] ) ) {
+			// Set the directory/file path
 
-			$file_path = sanitize_text_field( $_REQUEST['file'] );
+			if ( isset( $_REQUEST['file'] ) ) {
 
-			$file = $file_path ? $file_path : $abspath;
+				$file_path = sanitize_text_field( $_REQUEST['file'] );
 
-		}
+				$file = $file_path ? $file_path : $abspath;
 
-		if ( ( isset( $_GET['do'] ) ) && ( $_GET['do'] == 'list' ) ) {
-		// Return list of directories and files data for frontend AJAX request
+			}
 
-			if ( is_dir( $file ) ) {
+			if ( ( isset( $_GET['do'] ) ) && ( $_GET['do'] == 'list' ) ) {
+			// Return list of directories and files data for frontend AJAX request
 
-				$directory = $file;
-				$result = [];
-				$files = array_diff(scandir($directory), ['.','..']);
+				if ( is_dir( $file ) ) {
 
-				foreach ($files as $entry) if (!$this->is_entry_ignored($entry, $allow_show_folders, $hidden_patterns)) {
+					$directory = $file;
+					$result = [];
+					$files = array_diff(scandir($directory), ['.','..']);
 
-					$i = $directory . '/' . $entry;
-					$path = preg_replace('@^\./@', '', $i);
-					$mime_type = $this->get_mime_type( $path );
+					foreach ($files as $entry) if (!$this->is_entry_ignored($entry, $allow_show_folders, $hidden_patterns)) {
 
-					if ( ( strpos( $mime_type, 'text' ) !== false ) || ( strpos( $mime_type, 'php' ) !== false ) || ( strpos( $mime_type, 'json' ) !== false ) || ( strpos( $mime_type, 'html' ) !== false ) || ( strpos( $mime_type, 'empty' ) !== false ) ) {
-						$is_viewable = true;
-					} else {
-						$is_viewable = false;						
+						$i = $directory . '/' . $entry;
+						$path = preg_replace('@^\./@', '', $i);
+						$mime_type = $this->get_mime_type( $path );
+
+						if ( ( strpos( $mime_type, 'text' ) !== false ) || ( strpos( $mime_type, 'php' ) !== false ) || ( strpos( $mime_type, 'json' ) !== false ) || ( strpos( $mime_type, 'html' ) !== false ) || ( strpos( $mime_type, 'empty' ) !== false ) ) {
+							$is_viewable = true;
+						} else {
+							$is_viewable = false;						
+						}
+
+						$relpath = str_replace( ABSPATH, '', $i );
+						$stat = stat($i);
+
+						$result[] = [
+							'mtime' => $stat['mtime'],
+							'size' => $stat['size'],
+							'name' => basename($i),
+							'path' => $path,
+							'relpath'	=> $relpath,
+							'mime_type'	=> $mime_type,
+							'is_viewable' => $is_viewable,
+							'is_dir' => is_dir($i),
+							'is_readable' => is_readable($i),
+							'is_writable' => is_writable($i),
+							'is_executable' => is_executable($i),
+						];
+
 					}
 
-					$relpath = str_replace( ABSPATH, '', $i );
-					$stat = stat($i);
+					usort($result,function($f1,$f2){
+						$f1_key = ($f1['is_dir']?:2) . $f1['name'];
+						$f2_key = ($f2['is_dir']?:2) . $f2['name'];
+						return $f1_key > $f2_key;
+					});
 
-					$result[] = [
-						'mtime' => $stat['mtime'],
-						'size' => $stat['size'],
-						'name' => basename($i),
-						'path' => $path,
-						'relpath'	=> $relpath,
-						'mime_type'	=> $mime_type,
-						'is_viewable' => $is_viewable,
-						'is_dir' => is_dir($i),
-						'is_readable' => is_readable($i),
-						'is_writable' => is_writable($i),
-						'is_executable' => is_executable($i),
-					];
+				} else {
+
+					$this->err(412,"Not a Directory");
 
 				}
 
-				usort($result,function($f1,$f2){
-					$f1_key = ($f1['is_dir']?:2) . $f1['name'];
-					$f2_key = ($f2['is_dir']?:2) . $f2['name'];
-					return $f1_key > $f2_key;
-				});
+				echo json_encode([
+					'success' => true, 
+					'is_writable' => is_writable($file), 
+					'abspath' => $abspath,
+					'abspath_hash' => $abspath_hash,
+					'results' =>$result
+				]);
+				exit;
 
-			} else {
+			} elseif ( ( isset( $_GET['do'] ) ) && ( ( $_GET['do'] == 'view' ) || ( $_GET['do'] == 'edit' ) ) ) {
 
-				$this->err(412,"Not a Directory");
+				if ( isset( $_POST['submit'] ) ) {
 
-			}
+					$current_content = file_get_contents( $file );
 
-			echo json_encode([
-				'success' => true, 
-				'is_writable' => is_writable($file), 
-				'abspath' => $abspath,
-				'abspath_hash' => $abspath_hash,
-				'results' =>$result
-			]);
-			exit;
+					$new_content = wp_unslash( $_POST['editor-content'] );
 
-		} elseif ( ( isset( $_GET['do'] ) ) && ( ( $_GET['do'] == 'view' ) || ( $_GET['do'] == 'edit' ) ) ) {
+					file_put_contents( $file, $new_content );
 
-			if ( isset( $_POST['submit'] ) ) {
+					$success_message = '<div class="edit-success"><p>File edited successfully. You can continue editing.</p></div>';
 
-				$current_content = file_get_contents( $file );
+				} else {
 
-				$new_content = wp_unslash( $_POST['editor-content'] );
+					$success_message = '';
 
-				file_put_contents( $file, $new_content );
+				}
 
-				$success_message = '<div class="edit-success"><p>File edited successfully. You can continue editing.</p></div>';
+				if ( empty( file_get_contents( $file ) ) ) {
 
-			} else {
+					if ( $_GET['do'] == 'view' ) {
 
-				$success_message = '';
+						$editor_content = 'This file is empty';
 
-			}
+					} elseif ( $_GET['do'] == 'edit' ) {
 
-			if ( empty( file_get_contents( $file ) ) ) {
+				        $editor_content = 'Start editing here...';
+
+					}
+
+				} else {
+
+			        // $content = htmlentities( file_get_contents( $file ) );
+
+			        $editor_content = esc_textarea( file_get_contents( $file ) );
+
+				}
+
+		        $filename = '/' . str_replace( ABSPATH, '', $file );
+		        $file_extension = pathinfo( $file, PATHINFO_EXTENSION );
+
+		        if ( $file_extension == 'php' ) {
+	        		$mode = 'application/x-httpd-php';
+		        } elseif ( $file_extension == 'html' ) {
+	        		$mode = 'text/html';
+		        } elseif ( $file_extension == 'xml' ) {
+	        		$mode = 'application/xml';
+		        } elseif ( $file_extension == 'svg' ) {
+	        		$mode = 'application/xml';
+		        } elseif ( $file_extension == 'js' ) {
+	        		$mode = 'application/javascript';
+		        } elseif ( $file_extension == 'css' ) {
+	        		$mode = 'text/css';
+		        } elseif ( $file_extension == 'md' ) {
+	        		$mode = 'text/x-markdown';
+		        } elseif ( $file_extension == 'json' ) {
+	        		$mode = 'application/json';
+		        } elseif ( $file_extension == 'lock' ) {
+	        		$mode = 'application/json';
+		        } elseif ( $file_extension == 'txt' ) {
+	        		$mode = 'text/plain';
+		        } elseif ( $file_extension == 'htaccess' ) {
+	        		$mode = '.htaccess';
+		        } else {
+	        		$mode = 'text/plain';
+		        }
+
+			} elseif ( ( isset( $_GET['do'] ) ) && ( $_GET['do'] == 'download' ) ) {
+
+				foreach( $disallowed_patterns as $pattern ) {
+
+					if(fnmatch($pattern, $file)) {
+
+						$this->err(403,"Files of this type are not allowed.");
+
+					}
+
+				}
+
+				$filename = basename($file);
+				$finfo = finfo_open(FILEINFO_MIME_TYPE);
+				$http_referer = sanitize_url( $_SERVER['HTTP_REFERER'] );
+
+				header('Content-Type: ' . finfo_file($finfo, $file));
+				header('Content-Length: '. filesize($file));
+				header(sprintf('Content-Disposition: attachment; filename=%s',
+					strpos('MSIE',$http_referer) ? rawurlencode($filename) : "\"$filename\"" ));
+				ob_flush();
+				readfile($file);
+
+				exit;
+
+			} elseif ( ( isset( $_GET['do'] ) ) && ( $_GET['do'] == 'createfile' ) ) {
+
+				if ( ! is_file( $file ) ) {
+
+					$result = file_put_contents( $file, '' );
+
+					if ( $result !== false ) {
+
+						echo json_encode([
+							'success' => true,
+							'message' => 'File has been created.'
+						]);
+
+					} else {
+
+						echo json_encode([
+							'success' => false,
+							'message' => 'File was not created.'
+						]);
+
+					}
+
+				} else {
+
+					$file_array = explode('/', $file);
+
+					$new_file_name = array_pop( $file_array ); 
+
+					echo json_encode([
+						'success' => false,
+						'message' => 'The file \'' . $new_file_name . '\' already exists. Please pick another file name.'
+					]);
+
+				}
+
+				exit;
+
+			} elseif ( ( isset( $_GET['do'] ) ) && ( $_GET['do'] == 'createfolder' ) ) {
+
+				if ( ! is_dir( $file ) ) {
+
+					mkdir( $file );
+
+					echo json_encode([
+						'success' => true,
+						'message' => 'Folder has been created.'
+					]);
+
+				} else {
+
+					$file_array = explode('/', $file);
+
+					$new_folder_name = array_pop( $file_array ); 
+
+					echo json_encode([
+						'success' => false,
+						'message' => 'The \'' . $new_folder_name . '\' folder already exists. Please pick another folder name.'
+					]);
+
+				}
+
+				exit;
+
+			} elseif ( ( isset( $_GET['do'] ) ) && ( $_GET['do'] == 'uploadfile' ) ) {
+
+				$file_name = basename( $_FILES['new-upload']['name'] );
+
+				do_action( 'inspect', [ 'file_name', $file_name ] );
+
+				// Hash of folder location where file upload was initiated
+				// Includes the '#' symbol in front
+				$origin_hash = $_POST['url-hash'];
+
+				do_action( 'inspect', [ 'origin_hash', $origin_hash ] );
+
+				// e.g. /home/root/path/wp-content/uploads/temp/
+				$upload_dir = urldecode( str_replace( '#', '', $origin_hash ) ) . '/';
+
+				do_action( 'inspect', [ 'upload_dir', $upload_dir ] );
+
+				// e.g. /home/root/path/wp-content/uploads/temp/filename.jpg
+				$new_file_path = $upload_dir . $file_name;
+
+				do_action( 'inspect', [ 'new_file_path', $new_file_path ] );
+
+				// Move file from temporary storage to the new path
+				move_uploaded_file( $_FILES['new-upload']['tmp_name'], $new_file_path );
+
+				$redirect_url = get_site_url() . '/wp-admin/tools.php?page=' . $this->plugin_name . $origin_hash;
+
+				do_action( 'inspect', [ 'redirect_url_success', $redirect_url ] );
+
+				wp_safe_redirect( $redirect_url );
+				exit;
+
+			} else {}
+
+			// Output HTML
+
+			$html_output = '';
+
+			if ( ! isset( $_GET['do'] ) ) {
+
+				$html_output .= '<div id="top">
+									<div id="breadcrumb">&nbsp;</div>
+									<div class="action-buttons">
+										<button class="button action upload-button"><span class="icon-upload">&#10132;</span> Upload</button><button class="button action newfile-button">&#10010; File</button><button class="button action newfolder-button">&#10010; Folder</button>
+									</div>
+								</div> 
+								<div class="action-inputs">
+									<div class="action-upload">
+											<input type="hidden" name="MAX_FILE_SIZE" value="1048576" />
+											<input type="hidden" name="url-hash" id="upload-file-url-hash" value="" />
+											<input type="file" name="new-upload" id="new-upload">
+											<input type="submit" id="upload-file" class="button action button-primary upload-file" value="Upload Now" formaction="'. get_site_url() .'/wp-admin/tools.php?page=simple-file-manager&do=uploadfile" />
+											<button class="button action cancel-action cancel-upload">Cancel</button>
+									</div>
+									<div class="action-newfile">
+										<input type="text" name="new-filename" id="new-filename" value="" placeholder="e.g. filename.php"><button id="create-file" class="button action button-primary create-file">Create File</button><button class="button action cancel-action cancel-newfile">Cancel</button>
+									</div>
+									<div class="action-newfolder">
+										<input type="text" name="new-foldername" id="new-foldername" value="" placeholder="e.g. folder-name"><button  id="create-folder" class="button action button-primary create-folder">Create Folder</button><button class="button action cancel-action cancel-newfolder">Cancel</button>
+									</div>
+								</div>
+								<table id="table"><thead><tr>
+									<th>Name</th>
+									<th>Actions</th>
+									<th>Size</th>
+									<th>Modified</th>
+									<th>Permissions</th>
+								</tr></thead><tbody id="list"></tbody></table>';
+
+			} elseif ( ( isset( $_GET['do'] ) ) && ( ( $_GET['do'] == 'view' ) || ( $_GET['do'] == 'edit' ) ) ) {
 
 				if ( $_GET['do'] == 'view' ) {
 
-					$editor_content = 'This file is empty';
+					// $read_only = 'readOnly: "nocursor",';
+					$read_only = 'readOnly: true,';
+					$do_is = 'viewing';
 
 				} elseif ( $_GET['do'] == 'edit' ) {
 
-			        $editor_content = 'Start editing here...';
+					$read_only = 'readOnly: false,';
+					$do_is = 'editing';
 
 				}
 
-			} else {
+				if ( !empty( $success_message ) ) {
 
-		        // $content = htmlentities( file_get_contents( $file ) );
-
-		        $editor_content = esc_textarea( file_get_contents( $file ) );
-
-			}
-
-	        $filename = '/' . str_replace( ABSPATH, '', $file );
-	        $file_extension = pathinfo( $file, PATHINFO_EXTENSION );
-
-	        if ( $file_extension == 'php' ) {
-        		$mode = 'application/x-httpd-php';
-	        } elseif ( $file_extension == 'html' ) {
-        		$mode = 'text/html';
-	        } elseif ( $file_extension == 'xml' ) {
-        		$mode = 'application/xml';
-	        } elseif ( $file_extension == 'svg' ) {
-        		$mode = 'application/xml';
-	        } elseif ( $file_extension == 'js' ) {
-        		$mode = 'application/javascript';
-	        } elseif ( $file_extension == 'css' ) {
-        		$mode = 'text/css';
-	        } elseif ( $file_extension == 'md' ) {
-        		$mode = 'text/x-markdown';
-	        } elseif ( $file_extension == 'json' ) {
-        		$mode = 'application/json';
-	        } elseif ( $file_extension == 'lock' ) {
-        		$mode = 'application/json';
-	        } elseif ( $file_extension == 'txt' ) {
-        		$mode = 'text/plain';
-	        } elseif ( $file_extension == 'htaccess' ) {
-        		$mode = '.htaccess';
-	        } else {
-        		$mode = 'text/plain';
-	        }
-
-		} elseif ( ( isset( $_GET['do'] ) ) && ( $_GET['do'] == 'download' ) ) {
-
-			foreach( $disallowed_patterns as $pattern ) {
-
-				if(fnmatch($pattern, $file)) {
-
-					$this->err(403,"Files of this type are not allowed.");
+					$html_output .= $success_message;
 
 				}
 
-			}
+				$html_output .= '<div class="viewer-nav viewer-top">
+									<a href="#" class="back-step" onclick="window.history.back()"><span>&#10132;</span>Back</a><span class="viewing">You are ' . $do_is . ' <span class="filename">' . $filename . '</span></span>
+								</div>';
 
-			$filename = basename($file);
-			$finfo = finfo_open(FILEINFO_MIME_TYPE);
-			$http_referer = sanitize_url( $_SERVER['HTTP_REFERER'] );
+				if ( $_GET['do'] == 'view' ) {
 
-			header('Content-Type: ' . finfo_file($finfo, $file));
-			header('Content-Length: '. filesize($file));
-			header(sprintf('Content-Disposition: attachment; filename=%s',
-				strpos('MSIE',$http_referer) ? rawurlencode($filename) : "\"$filename\"" ));
-			ob_flush();
-			readfile($file);
+					$html_output .= '<div id="editor-content"><textarea id="codemirror" rows="25">' . $editor_content . '</textarea></div>';
 
-			exit;
+				} elseif ( $_GET['do'] == 'edit' ) {
 
-		} else {}
+					$html_output .= '<div id="editor-content"><form method="post">
+										<textarea id="codemirror" name="editor-content" rows="25">' . $editor_content . '</textarea>
+										<input type="submit" name="submit" value="Update File" class="button button-primary" />
+									</form></div>';
 
-		$html_output = '';
+				}
 
-		if ( ! isset( $_GET['do'] ) ) {
+				$html_output .= '<div class="viewer-nav viewer-bottom">
+										<a href="#" class="back-step" onclick="window.history.back()"><span>&#10132;</span>Back</a>
+								</div>';
 
-			$html_output .= '<div id="top">
-								<div id="breadcrumb">&nbsp;</div>
-							</div>
-							<table id="table"><thead><tr>
-								<th>Name</th>
-								<th>Actions</th>
-								<th>Size</th>
-								<th>Modified</th>
-								<th>Permissions</th>
-							</tr></thead><tbody id="list"></tbody></table>';
+				$html_output .= '<script>
+									jQuery(document).ready( function() {
+								        // CodeMirror editor
+								        var code = document.getElementById("codemirror");
+								        var editor = CodeMirror.fromTextArea(code, {
+								        	'.$read_only.'
+								        	mode: "'.$mode.'",
+								        	theme: "material-ocean",
+								        	lineNumbers: true,
+								        	lineWrapping: true,
+								        	extraKeys: {"Ctrl-Q": function(cm){ cm.foldCode(cm.getCursor()); }},
+								        	foldGutter: true,
+								        	gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"]
+								        });
+									});
+								</script>';
 
-		} elseif ( ( isset( $_GET['do'] ) ) && ( ( $_GET['do'] == 'view' ) || ( $_GET['do'] == 'edit' ) ) ) {
+			} else {}
 
-			if ( $_GET['do'] == 'view' ) {
+			return $html_output;
 
-				// $read_only = 'readOnly: "nocursor",';
-				$read_only = 'readOnly: true,';
-				$do_is = 'viewing';
-
-			} elseif ( $_GET['do'] == 'edit' ) {
-
-				$read_only = 'readOnly: false,';
-				$do_is = 'editing';
-
-			}
-
-			if ( !empty( $success_message ) ) {
-
-				$html_output .= $success_message;
-
-			}
-
-			$html_output .= '<div class="viewer-nav viewer-top">
-								<a href="#" class="back-step" onclick="window.history.back()"><span>&#10132;</span>Back</a><span class="viewing">You are ' . $do_is . ' <span class="filename">' . $filename . '</span></span>
-							</div>';
-
-			if ( $_GET['do'] == 'view' ) {
-
-				$html_output .= '<div id="editor-content"><textarea id="codemirror" rows="25">' . $editor_content . '</textarea></div>';
-
-			} elseif ( $_GET['do'] == 'edit' ) {
-
-				$html_output .= '<div id="editor-content"><form method="post">
-									<textarea id="codemirror" name="editor-content" rows="25">' . $editor_content . '</textarea>
-									<input type="submit" name="submit" value="Update File" class="button button-primary" />
-								</form></div>';
-
-			}
-
-			$html_output .= '<div class="viewer-nav viewer-bottom">
-									<a href="#" class="back-step" onclick="window.history.back()"><span>&#10132;</span>Back</a>
-							</div>';
-
-			$html_output .= '<script>
-								jQuery(document).ready( function() {
-							        // CodeMirror editor
-							        var code = document.getElementById("codemirror");
-							        var editor = CodeMirror.fromTextArea(code, {
-							        	'.$read_only.'
-							        	mode: "'.$mode.'",
-							        	theme: "material-ocean",
-							        	lineNumbers: true,
-							        	lineWrapping: true,
-							        	extraKeys: {"Ctrl-Q": function(cm){ cm.foldCode(cm.getCursor()); }},
-							        	foldGutter: true,
-							        	gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"]
-							        });
-								});
-							</script>';
-
-		} else {}
-
-		return $html_output;
+		}
 
 	}
 

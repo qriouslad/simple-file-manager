@@ -48,25 +48,89 @@
 
 /* Simple File Manager */
 
+.sfm .csf-field {
+    padding: 25px;
+}
+
 .sfm .csf-field.fmbody {
     padding-top: 0;
 }
 
 .sfm #top {
+    display: flex;
     height:auto;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin: 8px 0;
+    gap: 8px;
 }
 
 .sfm #breadcrumb { 
-    padding-top: 8px;
-    padding-bottom: 8px;
     font-size:14px;
-    color:#aaa;
+    line-height: 2.15384615;
+    min-height: 30px;
     display:inline-block;
-    float:left;
 }
 
 .sfm .breadcrumb-links {
     min-height: 20px;
+}
+
+.sfm #breadcrumb {
+    width: 77%;
+}
+
+.sfm .action-buttons {
+    width: 23%;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.sfm .action-buttons button {
+    margin-left: 8px;
+}
+
+.sfm .action-buttons button:first-child {
+    margin-left: 0;
+}
+
+.sfm .action-inputs {
+    position: absolute;
+    left: -1000vw;
+    width: 100%;
+    box-sizing: border-box;
+    background: #FAFBFC;
+    border: 1px solid #E3E8EE;
+    padding: 16px;
+    margin-bottom: 12px;
+}
+
+.sfm .action-inputs input[type="text"] {
+    margin-right: 8px;
+    width: 15em;
+}
+
+.sfm .cancel-action {
+    margin-left: 8px;
+}
+
+.sfm .action-upload,
+.sfm .action-newfile,
+.sfm .action-newfolder {
+    visibility: hidden;
+    height: 0;
+}
+
+.sfm .action-upload,
+.sfm .action-newfile,
+.sfm .action-newfolder {
+    text-align: center;
+}
+
+.sfm .icon-upload {
+    display: inline-block;
+    transform: rotate(270deg);
 }
 
 .sfm .back-step {
