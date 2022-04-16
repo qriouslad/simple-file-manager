@@ -166,6 +166,7 @@ class Simple_File_Manager_Admin {
 
 			// Security options
 			$allow_show_folders = true; // Set to false to hide all subdirectories
+			$allow_delete = true; // Allow deletion of folders and files
 
 			// Matching files not allowed to be uploaded. Must be an array.
 			$disallowed_patterns = []; // e.g. ['*.php']  
@@ -175,6 +176,10 @@ class Simple_File_Manager_Admin {
 
 			// must be in UTF-8 or `basename` doesn't work
 			setlocale(LC_ALL,'en_US.UTF-8');
+
+			if( !$_COOKIE['_sfm_xsrf'] ) {
+				setcookie( '_sfm_xsrf', bin2hex( openssl_random_pseudo_bytes( 16 ) ) );
+			}
 
 			// Set WordPress root path
 
@@ -224,6 +229,7 @@ class Simple_File_Manager_Admin {
 							'mime_type'	=> $mime_type,
 							'is_viewable' => $is_viewable,
 							'is_dir' => is_dir($i),
+							'is_deletable' => $allow_delete && ( (!is_dir($i) && is_writable( $directory ) ) || ( is_dir($i) && is_writable($directory) && $this->is_recursively_deleteable($i) ) ),
 							'is_readable' => is_readable($i),
 							'is_writable' => is_writable($i),
 							'is_executable' => is_executable($i),
@@ -650,6 +656,24 @@ class Simple_File_Manager_Admin {
 
 	    }
 
+	}
+
+	/** 
+	 * Check if directory is recursively deletable
+	 *
+	 * @since 1.3.0
+	 */
+	public function is_recursively_deleteable($d) {
+		$stack = [$d];
+		while($dir = array_pop($stack)) {
+			if(!is_readable($dir) || !is_writable($dir))
+				return false;
+			$files = array_diff(scandir($dir), ['.','..']);
+			foreach($files as $file) if(is_dir($file)) {
+				$stack[] = "$dir/$file";
+			}
+		}
+		return true;
 	}
 
 	/**

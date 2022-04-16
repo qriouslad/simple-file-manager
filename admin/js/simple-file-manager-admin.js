@@ -66,7 +66,19 @@
 			.text(data.name);
 		var $view_link = '<a href="?page=simple-file-manager&amp;do=view&amp;file=' + encodeURIComponent(data.path) + '" class="view">View</a>';			
 		var $edit_link = '<a href="?page=simple-file-manager&amp;do=edit&amp;file='+ encodeURIComponent(data.path) + '" class="edit">Edit</a>';
+		var $delete_link = '<a href="#" data-file="license.txt" class="delete">Delete</a>';
 		var $view_edit = $view_link + $edit_link;
+
+		var $action_links = '';
+
+		if ( data.is_viewable ) {
+			$action_links += $view_edit;
+		}
+
+		if ( data.is_deletable ) {
+			$action_links += $delete_link;			
+		}
+
 		var perms = [];
 
 		if(data.is_readable) perms.push('Read');
@@ -76,7 +88,7 @@
 		var $html = $('<tr />')
 			.addClass(data.is_dir ? 'is_dir' : '')
 			.append( $('<td class="first" />').append($filename_view_link) )
-			.append( $('<td/>').append( data.is_viewable ? $view_edit : '' ) )
+			.append( $('<td/>').append( $action_links ) )
 			.append( $('<td/>').html($('<span class="size" />').text(formatFileSize(data.size))) )
 			.append( $('<td/>').text(formatTimestamp(data.mtime)) )
 			.append( $('<td/>').text(perms.join('+')) )
@@ -323,6 +335,15 @@
 				e.preventDefault();
 			}
 
+		});
+
+		// Delete file / folder
+
+		$('#table').on('click','.delete',function(data) {
+			$.post("",{'do':'delete',file:$(this).attr('data-file'),xsrf:XSRF},function(response){
+				list();
+			},'json');
+			return false;
 		});
 
 	});
