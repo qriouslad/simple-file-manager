@@ -131,6 +131,40 @@
 		return pos ? [parseInt(d/10),".",d%10," ",s[pos]].join('') : bytes + ' bytes';
 	}
 
+	function createFile(fileName) {
+
+		var hashval = window.location.hash.substr(1);
+
+		$.get('?page=simple-file-manager&do=createfile&file='+ hashval + '%2F' + fileName,function(data) {
+
+			if(data.success) {
+				$('.cancel-newfile').click();
+				$('#new-filename').val('');
+				list();
+			} else {
+				alert(data.message);
+			}
+
+		},'json');
+	}
+
+	function createFolder(folderName) {
+
+		var hashval = window.location.hash.substr(1);
+
+		$.get('?page=simple-file-manager&do=createfolder&file='+ hashval + '%2F' + folderName,function(data) {
+
+			if(data.success) {
+				$('.cancel-newfolder').click();
+				$('#new-foldername').val('');
+				list();
+			} else {
+				alert(data.message);
+			}
+
+		},'json');
+	}
+
 	$(document).ready( function() {
 
 		// Remove default CodeStar buttons
@@ -150,41 +184,145 @@
 		}, 2000);
 
 		$('.upload-button').on('click', function(e) {
+
 			e.preventDefault();
-			$('.action-inputs').show();
-			$('.action-upload').show();
-			$('.action-newfile').hide();			
-			$('.action-newfolder').hide();
-			$('.cancel-upload').show();
-			$('.cancel-newfile').hide();
-			$('.cancel-newfolder').hide();
+
+			$('.action-inputs').css("position","initial");
+			$('.action-inputs').css("left","unset");
+			$('.action-upload').css("visibility","visible");
+			$('.action-upload').css("height","auto");
+
+			$('.action-newfile').css("visibility","hidden");
+			$('.action-newfile').css("height","0px");
+			$('.action-newfolder').css("visibility","hidden");
+			$('.action-newfolder').css("height","0px");
+
 		});
 
 		$('.newfile-button').on('click', function(e) {
+
 			e.preventDefault();
-			$('.action-inputs').show();
-			$('.action-upload').hide();
-			$('.action-newfile').show();			
-			$('.action-newfolder').hide();			
-			$('.cancel-upload').hide();
-			$('.cancel-newfile').show();
-			$('.cancel-newfolder').hide();
+
+			$('.action-inputs').css("position","initial");
+			$('.action-inputs').css("left","unset");
+			$('.action-newfile').css("visibility","visible");
+			$('.action-newfile').css("height","auto");
+
+			$('.action-upload').css("visibility","hidden");
+			$('.action-upload').css("height","0px");
+			$('.action-newfolder').css("visibility","hidden");
+			$('.action-newfolder').css("height","0px");
+
 		});
 
 		$('.newfolder-button').on('click', function(e) {
+
 			e.preventDefault();
-			$('.action-inputs').show();
-			$('.action-upload').hide();
-			$('.action-newfile').hide();			
-			$('.action-newfolder').show();			
-			$('.cancel-upload').hide();
-			$('.cancel-newfile').hide();
-			$('.cancel-newfolder').show();
+
+			$('.action-inputs').css("position","initial");
+			$('.action-inputs').css("left","unset");
+			$('.action-newfolder').css("visibility","visible");
+			$('.action-newfolder').css("height","auto");
+
+			$('.action-upload').css("visibility","hidden");
+			$('.action-upload').css("height","0px");
+			$('.action-newfile').css("visibility","hidden");
+			$('.action-newfile').css("height","0px");
+
 		});
 
 		$('.cancel-action').on('click', function(e) {
+
 			e.preventDefault();
-			$('.action-inputs').hide();
+
+			$('.action-inputs').css("position","absolute");
+			$('.action-inputs').css("left","-1000vw");
+
+			$('.action-upload').css("visibility","hidden");
+			$('.action-upload').css("height","0px");
+			$('.action-newfile').css("visibility","hidden");
+			$('.action-newfile').css("height","0px");
+			$('.action-newfolder').css("visibility","hidden");
+			$('.action-newfolder').css("height","0px");
+
+		});
+
+		// Create file
+
+		$('#create-file').on('click', function(e) {
+			var fileName = document.getElementById("new-filename").value;
+
+			if (fileName === "") {
+				alert("Please enter the file name first.");
+				e.preventDefault();
+			} else {
+				createFile(fileName);
+				e.preventDefault();
+			}
+		});
+
+		var filenameInput = document.getElementById("new-filename");
+
+		// Execute a function when the user releases a key on the keyboard
+		filenameInput.addEventListener("keyup", function(e) {
+
+			// Number 13 is the "Enter" key on the keyboard
+			if (e.keyCode == 13 ) {
+
+				e.preventDefault();
+
+				document.getElementById("create-file").click();
+
+			}
+
+		});
+
+		// Create folder
+
+		$('#create-folder').on('click', function(e) {
+			var folderName = document.getElementById("new-foldername").value;
+
+			if (folderName === "") {
+				alert("Please enter the folder name first.");
+				e.preventDefault();
+			} else {
+				createFolder(folderName);
+				e.preventDefault();
+			}
+		});
+
+		var foldernameInput = document.getElementById("new-foldername");
+
+		// Execute a function when the user releases a key on the keyboard
+		foldernameInput.addEventListener("keyup", function(e) {
+
+			// Number 13 is the "Enter" key on the keyboard
+			if (e.keyCode == 13 ) {
+
+				e.preventDefault();
+
+				document.getElementById("create-folder").click();
+
+			}
+
+		});
+
+		// Upload file
+
+		// Get URL hash and pass to file upload submit's formaction parameter
+
+		var hash = window.location.hash;
+
+		$('#upload-file-url-hash').val(hash);
+
+		$('#upload-file').on('click', function(e) {
+			var uploadFileName = document.getElementById("new-upload").value;
+
+			if (uploadFileName === "") {
+				alert("Please choose a file first.");
+				e.preventDefault();
+			}
+
 		});
 
 	});

@@ -341,7 +341,104 @@ class Simple_File_Manager_Admin {
 
 			exit;
 
+		} elseif ( ( isset( $_GET['do'] ) ) && ( $_GET['do'] == 'createfile' ) ) {
+
+			if ( ! is_file( $file ) ) {
+
+				$result = file_put_contents( $file, '' );
+
+				if ( $result !== false ) {
+
+					echo json_encode([
+						'success' => true,
+						'message' => 'File has been created.'
+					]);
+
+				} else {
+
+					echo json_encode([
+						'success' => false,
+						'message' => 'File was not created.'
+					]);
+
+				}
+
+			} else {
+
+				$file_array = explode('/', $file);
+
+				$new_file_name = array_pop( $file_array ); 
+
+				echo json_encode([
+					'success' => false,
+					'message' => 'The file \'' . $new_file_name . '\' already exists. Please pick another file name.'
+				]);
+
+			}
+
+			exit;
+
+		} elseif ( ( isset( $_GET['do'] ) ) && ( $_GET['do'] == 'createfolder' ) ) {
+
+			if ( ! is_dir( $file ) ) {
+
+				mkdir( $file );
+
+				echo json_encode([
+					'success' => true,
+					'message' => 'Folder has been created.'
+				]);
+
+			} else {
+
+				$file_array = explode('/', $file);
+
+				$new_folder_name = array_pop( $file_array ); 
+
+				echo json_encode([
+					'success' => false,
+					'message' => 'The \'' . $new_folder_name . '\' folder already exists. Please pick another folder name.'
+				]);
+
+			}
+
+			exit;
+
+		} elseif ( ( isset( $_GET['do'] ) ) && ( $_GET['do'] == 'uploadfile' ) ) {
+
+			$file_name = basename( $_FILES['new-upload']['name'] );
+
+			do_action( 'inspect', [ 'file_name', $file_name ] );
+
+			// Hash of folder location where file upload was initiated
+			// Includes the '#' symbol in front
+			$origin_hash = $_POST['url-hash'];
+
+			do_action( 'inspect', [ 'origin_hash', $origin_hash ] );
+
+			// e.g. /home/root/path/wp-content/uploads/temp/
+			$upload_dir = urldecode( str_replace( '#', '', $origin_hash ) ) . '/';
+
+			do_action( 'inspect', [ 'upload_dir', $upload_dir ] );
+
+			// e.g. /home/root/path/wp-content/uploads/temp/filename.jpg
+			$new_file_path = $upload_dir . $file_name;
+
+			do_action( 'inspect', [ 'new_file_path', $new_file_path ] );
+
+			// Move file from temporary storage to the new path
+			move_uploaded_file( $_FILES['new-upload']['tmp_name'], $new_file_path );
+
+			$redirect_url = get_site_url() . '/wp-admin/tools.php?page=' . $this->plugin_name . $origin_hash;
+
+			do_action( 'inspect', [ 'redirect_url_success', $redirect_url ] );
+
+			wp_safe_redirect( $redirect_url );
+			exit;
+
 		} else {}
+
+		// Output HTML
 
 		$html_output = '';
 
@@ -355,15 +452,19 @@ class Simple_File_Manager_Admin {
 							</div> 
 							<div class="action-inputs">
 								<div class="action-upload">
-									<input type="file" name="new-upload" id="new-upload"><button class="button action button-primary">Upload Now</button><button class="button action cancel-action cancel-upload">Cancel</button>
+										<input type="hidden" name="MAX_FILE_SIZE" value="1048576" />
+										<input type="hidden" name="url-hash" id="upload-file-url-hash" value="" />
+										<input type="file" name="new-upload" id="new-upload">
+										<input type="submit" id="upload-file" class="button action button-primary upload-file" value="Upload Now" formaction="'. get_site_url() .'/wp-admin/tools.php?page=simple-file-manager&do=uploadfile" />
+										<button class="button action cancel-action cancel-upload">Cancel</button>
 								</div>
 								<div class="action-newfile">
-									<input type="text" name="new-filename" id="new-filename" value="" placeholder="e.g. filename.php"><button class="button action button-primary">Create File</button><button class="button action cancel-action cancel-newfile">Cancel</button>
+									<input type="text" name="new-filename" id="new-filename" value="" placeholder="e.g. filename.php"><button id="create-file" class="button action button-primary create-file">Create File</button><button class="button action cancel-action cancel-newfile">Cancel</button>
 								</div>
 								<div class="action-newfolder">
-									<input type="text" name="new-filename" id="new-foldername" value="" placeholder="e.g. folder-name"><button class="button action button-primary">Create Folder</button><button class="button action cancel-action cancel-newfolder">Cancel</button>
+									<input type="text" name="new-foldername" id="new-foldername" value="" placeholder="e.g. folder-name"><button  id="create-folder" class="button action button-primary create-folder">Create Folder</button><button class="button action cancel-action cancel-newfolder">Cancel</button>
 								</div>
-								</div>
+							</div>
 							<table id="table"><thead><tr>
 								<th>Name</th>
 								<th>Actions</th>

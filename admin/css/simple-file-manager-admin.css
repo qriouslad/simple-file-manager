@@ -63,15 +63,14 @@
     align-items: center;
     justify-content: space-between;
     margin: 8px 0;
+    gap: 8px;
 }
 
 .sfm #breadcrumb { 
-    padding-top: 8px;
-    padding-bottom: 8px;
     font-size:14px;
-    color:#aaa;
+    line-height: 2.15384615;
+    min-height: 30px;
     display:inline-block;
-    float:left;
 }
 
 .sfm .breadcrumb-links {
@@ -84,7 +83,8 @@
 
 .sfm .action-buttons {
     width: 23%;
-    max-width: 226px;
+    display: flex;
+    justify-content: flex-end;
 }
 
 .sfm .action-buttons button {
@@ -96,6 +96,8 @@
 }
 
 .sfm .action-inputs {
+    position: absolute;
+    left: -1000vw;
     width: 100%;
     box-sizing: border-box;
     background: #FAFBFC;
@@ -112,12 +114,12 @@
 .sfm .cancel-action {
     margin-left: 8px;
 }
-.sfm .action-inputs,
+
 .sfm .action-upload,
 .sfm .action-newfile,
-.sfm .action-newfolder,
-.sfm .cancel-action {
-    display: none;
+.sfm .action-newfolder {
+    visibility: hidden;
+    height: 0;
 }
 
 .sfm .action-upload,
