@@ -411,30 +411,30 @@ class Simple_File_Manager_Admin {
 
 				$file_name = basename( $_FILES['new-upload']['name'] );
 
-				do_action( 'inspect', [ 'file_name', $file_name ] );
+				// do_action( 'inspect', [ 'file_name', $file_name ] );
 
 				// Hash of folder location where file upload was initiated
 				// Includes the '#' symbol in front
 				$origin_hash = $_POST['url-hash'];
 
-				do_action( 'inspect', [ 'origin_hash', $origin_hash ] );
+				// do_action( 'inspect', [ 'origin_hash', $origin_hash ] );
 
 				// e.g. /home/root/path/wp-content/uploads/temp/
 				$upload_dir = urldecode( str_replace( '#', '', $origin_hash ) ) . '/';
 
-				do_action( 'inspect', [ 'upload_dir', $upload_dir ] );
+				// do_action( 'inspect', [ 'upload_dir', $upload_dir ] );
 
 				// e.g. /home/root/path/wp-content/uploads/temp/filename.jpg
 				$new_file_path = $upload_dir . $file_name;
 
-				do_action( 'inspect', [ 'new_file_path', $new_file_path ] );
+				// do_action( 'inspect', [ 'new_file_path', $new_file_path ] );
 
 				// Move file from temporary storage to the new path
 				move_uploaded_file( $_FILES['new-upload']['tmp_name'], $new_file_path );
 
 				$redirect_url = get_site_url() . '/wp-admin/tools.php?page=' . $this->plugin_name . $origin_hash;
 
-				do_action( 'inspect', [ 'redirect_url_success', $redirect_url ] );
+				// do_action( 'inspect', [ 'redirect_url_success', $redirect_url ] );
 
 				wp_safe_redirect( $redirect_url );
 				exit;
