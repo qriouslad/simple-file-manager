@@ -187,6 +187,18 @@
     padding: 1em;
 }
 
+/*
+.sfm #table .th-actions span,
+.sfm tr .td-actions a {
+    visibility: hidden;
+}
+
+.sfm #table:hover .th-actions span
+.sfm tr:hover .td-actions a {
+    visibility: visible;
+}
+*/
+
 .sfm tr {
     border-right:1px solid #E3E8EE;
     border-left:1px solid #E3E8EE;

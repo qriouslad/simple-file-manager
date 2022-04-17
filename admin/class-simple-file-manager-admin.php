@@ -166,6 +166,8 @@ class Simple_File_Manager_Admin {
 
 			// Security options
 			$allow_show_folders = true; // Set to false to hide all subdirectories
+
+			// Deletion options
 			$allow_delete = true; // Allow deletion of folders and files
 
 			// Matching files not allowed to be uploaded. Must be an array.
@@ -205,16 +207,60 @@ class Simple_File_Manager_Admin {
 					$result = [];
 					$files = array_diff(scandir($directory), ['.','..']);
 
+					$n = 0;
+
 					foreach ($files as $entry) if (!$this->is_entry_ignored($entry, $allow_show_folders, $hidden_patterns)) {
 
 						$i = $directory . '/' . $entry;
 						$path = preg_replace('@^\./@', '', $i);
 						$mime_type = $this->get_mime_type( $path );
 
+						// Check if $path is editable or not
+
 						if ( ( strpos( $mime_type, 'text' ) !== false ) || ( strpos( $mime_type, 'php' ) !== false ) || ( strpos( $mime_type, 'json' ) !== false ) || ( strpos( $mime_type, 'html' ) !== false ) || ( strpos( $mime_type, 'empty' ) !== false ) ) {
 							$is_viewable = true;
+
+							if ( $this->sfm_is_wpcore_path( $path ) ) {
+
+								if ( strpos( $path, 'wp-config.php' ) !== false ) {
+
+									$is_editable = true;
+
+								} else {
+
+									$is_editable = false;
+
+								}
+
+							} else {
+
+								$is_editable = true;
+
+							}
+
 						} else {
 							$is_viewable = false;						
+							$is_editable = false;
+						}
+
+						// Check if $path is deletable or not
+
+						if ( ( strpos( $path, 'index.php' ) !== false ) && ( strpos( $path, 'wp-content' ) === false ) ) {
+
+							$is_deletable = false;
+
+						} elseif ( ( strpos( $path, 'index.php' ) !== false ) && ( strpos( $path, 'wp-content' ) !== false ) ) {
+
+							$is_deletable = true;
+
+						} elseif ( $this->sfm_is_wpcore_path( $path ) === false ) {
+
+							$is_deletable = true;
+
+						} else {
+
+							$is_deletable = false;
+
 						}
 
 						$relpath = str_replace( ABSPATH, '', $i );
@@ -228,12 +274,15 @@ class Simple_File_Manager_Admin {
 							'relpath'	=> $relpath,
 							'mime_type'	=> $mime_type,
 							'is_viewable' => $is_viewable,
+							'is_editable' => $is_editable,
 							'is_dir' => is_dir($i),
-							'is_deletable' => $allow_delete && ( (!is_dir($i) && is_writable( $directory ) ) || ( is_dir($i) && is_writable($directory) && $this->is_recursively_deleteable($i) ) ),
+							'is_deletable' => $allow_delete && ( (!is_dir($i) && is_writable( $directory ) ) || ( is_dir($i) && is_writable($directory) && $this->is_recursively_deleteable($i) ) ) && $is_deletable,
 							'is_readable' => is_readable($i),
 							'is_writable' => is_writable($i),
 							'is_executable' => is_executable($i),
 						];
+
+						$n++;
 
 					}
 
@@ -417,32 +466,37 @@ class Simple_File_Manager_Admin {
 
 				$file_name = basename( $_FILES['new-upload']['name'] );
 
-				// do_action( 'inspect', [ 'file_name', $file_name ] );
-
 				// Hash of folder location where file upload was initiated
 				// Includes the '#' symbol in front
 				$origin_hash = $_POST['url-hash'];
 
-				// do_action( 'inspect', [ 'origin_hash', $origin_hash ] );
-
 				// e.g. /home/root/path/wp-content/uploads/temp/
 				$upload_dir = urldecode( str_replace( '#', '', $origin_hash ) ) . '/';
 
-				// do_action( 'inspect', [ 'upload_dir', $upload_dir ] );
-
 				// e.g. /home/root/path/wp-content/uploads/temp/filename.jpg
 				$new_file_path = $upload_dir . $file_name;
-
-				// do_action( 'inspect', [ 'new_file_path', $new_file_path ] );
 
 				// Move file from temporary storage to the new path
 				move_uploaded_file( $_FILES['new-upload']['tmp_name'], $new_file_path );
 
 				$redirect_url = get_site_url() . '/wp-admin/tools.php?page=' . $this->plugin_name . $origin_hash;
 
-				// do_action( 'inspect', [ 'redirect_url_success', $redirect_url ] );
-
 				wp_safe_redirect( $redirect_url );
+				exit;
+
+			} elseif ( ( isset( $_POST['do'] ) ) && ( $_POST['do'] == 'delete' ) ) {
+
+				if( $allow_delete ) {
+
+					$this->rmrf( $file );
+
+					echo json_encode([
+						'success' => true,
+						'message' => 'Deletion was successful.'
+					]);
+
+				}
+
 				exit;
 
 			} else {}
@@ -475,11 +529,11 @@ class Simple_File_Manager_Admin {
 									</div>
 								</div>
 								<table id="table"><thead><tr>
-									<th>Name</th>
-									<th>Actions</th>
-									<th>Size</th>
-									<th>Modified</th>
-									<th>Permissions</th>
+									<th><span>Name</span></th>
+									<th class="th-actions"><span>Actions</span></th>
+									<th><span>Size</span></th>
+									<th><span>Modified</span></th>
+									<th><span>Permissions</span></th>
 								</tr></thead><tbody id="list"></tbody></table>';
 
 			} elseif ( ( isset( $_GET['do'] ) ) && ( ( $_GET['do'] == 'view' ) || ( $_GET['do'] == 'edit' ) ) ) {
@@ -674,6 +728,73 @@ class Simple_File_Manager_Admin {
 			}
 		}
 		return true;
+	}
+
+	/**
+	 * Delete file or folder recursively
+	 *
+	 * @since 1.3.0
+	 */
+	public function rmrf( $dir ) {
+
+		if ( is_dir( $dir ) ) {
+
+			$files = array_diff( scandir( $dir ), ['.','..'] );
+
+			foreach ( $files as $file ) {
+
+				self::rmrf( "$dir/$file" );
+
+			}
+
+			rmdir( $dir );
+
+		} else {
+
+			unlink($dir);
+		}
+
+	}
+
+	/** 
+	 * Check if path is part of WP core folders and files
+	 *
+	 * @since 1.3.0
+	 */
+	public function sfm_is_wpcore_path( $path ) {
+
+		$disallowed_paths = array(
+			ABSPATH . 'wp-admin',
+			ABSPATH . 'wp-content',
+			ABSPATH . 'wp-includes',
+			ABSPATH . 'wp-content/plugins',
+			ABSPATH . 'wp-content/themes',
+			ABSPATH . 'wp-content/uploads',
+			ABSPATH . 'wp-activate.php',
+			ABSPATH . 'wp-blog-header.php',
+			ABSPATH . 'wp-comments-post.php',
+			ABSPATH . 'wp-config.php',
+			ABSPATH . 'wp-cron.php',
+			ABSPATH . 'wp-links-opml.php',
+			ABSPATH . 'wp-load.php',
+			ABSPATH . 'wp-login.php',
+			ABSPATH . 'wp-mail.php',
+			ABSPATH . 'wp-settings.php',
+			ABSPATH . 'wp-signup.php',
+			ABSPATH . 'wp-trackback.php',
+			ABSPATH . 'xmlrpc.php',
+		);
+
+		if ( ( strpos( $path, 'wp-admin' ) !== false ) || ( strpos( $path, 'wp-includes' ) !== false ) || in_array( $path, $disallowed_paths ) ) {
+
+			return true; // $path is part of WP core
+
+		} else {
+
+			return false; // $path is NOT part of WP core
+
+		}
+
 	}
 
 	/**

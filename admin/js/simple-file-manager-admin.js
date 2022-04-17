@@ -31,6 +31,24 @@
 
 	var XSRF = (document.cookie.match('(^|; )_sfm_xsrf=([^;]*)')||0)[2];
 
+	$('#table').on('click','.delete',function(data) {
+		$.post("",{
+			'do': 'delete',
+			file: $(this).attr('data-file'),
+			xsrf: XSRF
+		},
+		function(data){
+
+			if ( data.success ) {
+				list();
+			} else {
+				alert( 'Oops, something went wrong...' );
+			}
+		},
+		'json');
+		return false;
+	});
+
 	$(window).on('hashchange',list).trigger('hashchange');
 	$(window).on('load',list);
 
@@ -66,13 +84,16 @@
 			.text(data.name);
 		var $view_link = '<a href="?page=simple-file-manager&amp;do=view&amp;file=' + encodeURIComponent(data.path) + '" class="view">View</a>';			
 		var $edit_link = '<a href="?page=simple-file-manager&amp;do=edit&amp;file='+ encodeURIComponent(data.path) + '" class="edit">Edit</a>';
-		var $delete_link = '<a href="#" data-file="license.txt" class="delete">Delete</a>';
-		var $view_edit = $view_link + $edit_link;
+		var $delete_link = '<a href="#" data-file="' + data.path + '" class="delete">Delete</a>';
 
 		var $action_links = '';
 
 		if ( data.is_viewable ) {
-			$action_links += $view_edit;
+			$action_links += $view_link;
+		}
+
+		if ( data.is_editable ) {
+			$action_links += $edit_link;
 		}
 
 		if ( data.is_deletable ) {
@@ -88,7 +109,7 @@
 		var $html = $('<tr />')
 			.addClass(data.is_dir ? 'is_dir' : '')
 			.append( $('<td class="first" />').append($filename_view_link) )
-			.append( $('<td/>').append( $action_links ) )
+			.append( $('<td/>').append( $action_links ).addClass('td-actions') )
 			.append( $('<td/>').html($('<span class="size" />').text(formatFileSize(data.size))) )
 			.append( $('<td/>').text(formatTimestamp(data.mtime)) )
 			.append( $('<td/>').text(perms.join('+')) )
@@ -321,13 +342,14 @@
 
 		// Upload file
 
-		// Get URL hash and pass to file upload submit's formaction parameter
-
-		var hash = window.location.hash;
-
-		$('#upload-file-url-hash').val(hash);
-
 		$('#upload-file').on('click', function(e) {
+
+			// Get URL hash and pass to file upload submit's formaction parameter
+
+			var hash = window.location.hash;
+
+			$('#upload-file-url-hash').val(hash);
+
 			var uploadFileName = document.getElementById("new-upload").value;
 
 			if (uploadFileName === "") {
