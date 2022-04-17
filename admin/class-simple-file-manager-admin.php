@@ -199,6 +199,7 @@ class Simple_File_Manager_Admin {
 			}
 
 			if ( ( isset( $_GET['do'] ) ) && ( $_GET['do'] == 'list' ) ) {
+
 			// Return list of directories and files data for frontend AJAX request
 
 				if ( is_dir( $file ) ) {
@@ -209,11 +210,11 @@ class Simple_File_Manager_Admin {
 
 					$n = 0;
 
-					foreach ($files as $entry) if (!$this->is_entry_ignored($entry, $allow_show_folders, $hidden_patterns)) {
+					foreach ($files as $entry) if (!$this->sfm_is_entry_ignored($entry, $allow_show_folders, $hidden_patterns)) {
 
 						$i = $directory . '/' . $entry;
 						$path = preg_replace('@^\./@', '', $i);
-						$mime_type = $this->get_mime_type( $path );
+						$mime_type = $this->sfm_mime_type( $path );
 
 						// Check if $path is editable or not
 
@@ -276,7 +277,7 @@ class Simple_File_Manager_Admin {
 							'is_viewable' => $is_viewable,
 							'is_editable' => $is_editable,
 							'is_dir' => is_dir($i),
-							'is_deletable' => $allow_delete && ( (!is_dir($i) && is_writable( $directory ) ) || ( is_dir($i) && is_writable($directory) && $this->is_recursively_deleteable($i) ) ) && $is_deletable,
+							'is_deletable' => $allow_delete && ( (!is_dir($i) && is_writable( $directory ) ) || ( is_dir($i) && is_writable($directory) && $this->sfm_is_recursively_deleteable($i) ) ) && $is_deletable,
 							'is_readable' => is_readable($i),
 							'is_writable' => is_writable($i),
 							'is_executable' => is_executable($i),
@@ -294,7 +295,7 @@ class Simple_File_Manager_Admin {
 
 				} else {
 
-					$this->err(412,"Not a Directory");
+					$this->sfm_err(412,"Not a Directory");
 
 				}
 
@@ -308,6 +309,8 @@ class Simple_File_Manager_Admin {
 				exit;
 
 			} elseif ( ( isset( $_GET['do'] ) ) && ( ( $_GET['do'] == 'view' ) || ( $_GET['do'] == 'edit' ) ) ) {
+
+				// Save edits and return message
 
 				if ( isset( $_POST['submit'] ) ) {
 
@@ -325,6 +328,8 @@ class Simple_File_Manager_Admin {
 
 				}
 
+				// Get file content and return default content when file is empty
+
 				if ( empty( file_get_contents( $file ) ) ) {
 
 					if ( $_GET['do'] == 'view' ) {
@@ -339,14 +344,14 @@ class Simple_File_Manager_Admin {
 
 				} else {
 
-			        // $content = htmlentities( file_get_contents( $file ) );
-
 			        $editor_content = esc_textarea( file_get_contents( $file ) );
 
 				}
 
 		        $filename = '/' . str_replace( ABSPATH, '', $file );
 		        $file_extension = pathinfo( $file, PATHINFO_EXTENSION );
+
+		        // Set CodeMirror mode based on file extension
 
 		        if ( $file_extension == 'php' ) {
 	        		$mode = 'application/x-httpd-php';
@@ -376,11 +381,13 @@ class Simple_File_Manager_Admin {
 
 			} elseif ( ( isset( $_GET['do'] ) ) && ( $_GET['do'] == 'download' ) ) {
 
+				// Process file download
+
 				foreach( $disallowed_patterns as $pattern ) {
 
 					if(fnmatch($pattern, $file)) {
 
-						$this->err(403,"Files of this type are not allowed.");
+						$this->sfm_err(403,"Files of this type are not allowed.");
 
 					}
 
@@ -400,6 +407,8 @@ class Simple_File_Manager_Admin {
 				exit;
 
 			} elseif ( ( isset( $_GET['do'] ) ) && ( $_GET['do'] == 'createfile' ) ) {
+
+				// Create new file
 
 				if ( ! is_file( $file ) ) {
 
@@ -438,6 +447,8 @@ class Simple_File_Manager_Admin {
 
 			} elseif ( ( isset( $_GET['do'] ) ) && ( $_GET['do'] == 'createfolder' ) ) {
 
+				// Create new folder
+
 				if ( ! is_dir( $file ) ) {
 
 					mkdir( $file );
@@ -464,6 +475,8 @@ class Simple_File_Manager_Admin {
 
 			} elseif ( ( isset( $_GET['do'] ) ) && ( $_GET['do'] == 'uploadfile' ) ) {
 
+				// Upload file
+
 				$file_name = basename( $_FILES['new-upload']['name'] );
 
 				// Hash of folder location where file upload was initiated
@@ -486,9 +499,11 @@ class Simple_File_Manager_Admin {
 
 			} elseif ( ( isset( $_POST['do'] ) ) && ( $_POST['do'] == 'delete' ) ) {
 
+				// Delete file or folder (recursively)
+
 				if( $allow_delete ) {
 
-					$this->rmrf( $file );
+					$this->sfm_delete_recursively( $file );
 
 					echo json_encode([
 						'success' => true,
@@ -506,6 +521,8 @@ class Simple_File_Manager_Admin {
 			$html_output = '';
 
 			if ( ! isset( $_GET['do'] ) ) {
+
+				// Output default list view with action buttons
 
 				$html_output .= '<div id="top">
 									<div id="breadcrumb">&nbsp;</div>
@@ -540,11 +557,14 @@ class Simple_File_Manager_Admin {
 
 				if ( $_GET['do'] == 'view' ) {
 
-					// $read_only = 'readOnly: "nocursor",';
+					// Set CodeMirror to read only mode
+
 					$read_only = 'readOnly: true,';
 					$do_is = 'viewing';
 
 				} elseif ( $_GET['do'] == 'edit' ) {
+
+					// Set CodeMirror to edit mode
 
 					$read_only = 'readOnly: false,';
 					$do_is = 'editing';
@@ -557,9 +577,13 @@ class Simple_File_Manager_Admin {
 
 				}
 
+				// Top part of file content
+
 				$html_output .= '<div class="viewer-nav viewer-top">
 									<a href="#" class="back-step" onclick="window.history.back()"><span>&#10132;</span>Back</a><span class="viewing">You are ' . $do_is . ' <span class="filename">' . $filename . '</span></span>
 								</div>';
+
+				// Output file content in view / edit mode
 
 				if ( $_GET['do'] == 'view' ) {
 
@@ -577,6 +601,8 @@ class Simple_File_Manager_Admin {
 				$html_output .= '<div class="viewer-nav viewer-bottom">
 										<a href="#" class="back-step" onclick="window.history.back()"><span>&#10132;</span>Back</a>
 								</div>';
+
+				// Script to handle CodeMirror behaviour
 
 				$html_output .= '<script>
 									jQuery(document).ready( function() {
@@ -609,7 +635,7 @@ class Simple_File_Manager_Admin {
 	 * @link http://php.net/manual/en/function.realpath.php#84012
 	 * @since 1.0.0
 	 */
-	public function get_absolute_path( $path ) {
+	public function sfm_get_absolute_path( $path ) {
 
 		$path = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $path);
 		$parts = explode(DIRECTORY_SEPARATOR, $path);
@@ -636,7 +662,7 @@ class Simple_File_Manager_Admin {
 	 * 
 	 * @since 1.0.0
 	 */
-	public function is_entry_ignored($entry, $allow_show_folders, $hidden_patterns) {
+	public function sfm_is_entry_ignored($entry, $allow_show_folders, $hidden_patterns) {
 
 		if ($entry === basename(__FILE__)) {
 			return true;
@@ -663,7 +689,7 @@ class Simple_File_Manager_Admin {
 	 *
 	 * @since 1.0.0
 	 */
-	public function err($code,$msg) {
+	public function sfm_err($code,$msg) {
 		// http_response_code($code);
 		// header("Content-Type: application/json");
 		// echo json_encode(['error' => ['code'=>intval($code), 'msg' => $msg]]);
@@ -676,7 +702,7 @@ class Simple_File_Manager_Admin {
 	 *
 	 * @since 1.0.0
 	 */
-	public function asBytes($ini_v) {
+	public function sfm_as_bytes($ini_v) {
 
 		$ini_v = trim($ini_v);
 		$s = ['g'=> 1<<30, 'm' => 1<<20, 'k' => 1<<10];
@@ -691,7 +717,7 @@ class Simple_File_Manager_Admin {
 	 * @link https://github.com/prasathmani/tinyfilemanager
 	 * @since 1.0.0
 	 */
-	public function get_mime_type( $file_path ) {
+	public function sfm_mime_type( $file_path ) {
 
 	    if ( function_exists('finfo_open') ) {
 
@@ -717,7 +743,7 @@ class Simple_File_Manager_Admin {
 	 *
 	 * @since 1.3.0
 	 */
-	public function is_recursively_deleteable($d) {
+	public function sfm_is_recursively_deleteable($d) {
 		$stack = [$d];
 		while($dir = array_pop($stack)) {
 			if(!is_readable($dir) || !is_writable($dir))
@@ -735,7 +761,7 @@ class Simple_File_Manager_Admin {
 	 *
 	 * @since 1.3.0
 	 */
-	public function rmrf( $dir ) {
+	public function sfm_delete_recursively( $dir ) {
 
 		if ( is_dir( $dir ) ) {
 
@@ -743,7 +769,7 @@ class Simple_File_Manager_Admin {
 
 			foreach ( $files as $file ) {
 
-				self::rmrf( "$dir/$file" );
+				self::sfm_delete_recursively( "$dir/$file" );
 
 			}
 
