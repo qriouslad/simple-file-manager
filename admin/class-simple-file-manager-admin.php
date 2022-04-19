@@ -179,8 +179,20 @@ class Simple_File_Manager_Admin {
 			// must be in UTF-8 or `basename` doesn't work
 			setlocale(LC_ALL,'en_US.UTF-8');
 
+			// Set cookie and get/set user ID for use in nonces
+
 			if( !$_COOKIE['_sfm_xsrf'] ) {
 				setcookie( '_sfm_xsrf', bin2hex( openssl_random_pseudo_bytes( 16 ) ) );
+			}
+
+			if ( is_user_logged_in() ) {
+
+				$uid = (string) get_current_user_id();
+
+			} else {
+
+				$uid = '007';
+
 			}
 
 			// Set WordPress root path
@@ -196,11 +208,19 @@ class Simple_File_Manager_Admin {
 
 				$file = $file_path ? $file_path : $abspath;
 
+			} else {
+
+				$file = $abspath;
+
 			}
 
 			if ( ( isset( $_GET['do'] ) ) && ( $_GET['do'] == 'list' ) ) {
 
-			// Return list of directories and files data for frontend AJAX request
+				// Create deletion nonce for javascript
+
+				$deletion_nonce = wp_create_nonce( 'deletion-nonce_' . $_COOKIE['_sfm_xsrf'] . $uid );
+
+				// Return list of directories and files data for frontend AJAX request
 
 				if ( is_dir( $file ) ) {
 
@@ -278,6 +298,7 @@ class Simple_File_Manager_Admin {
 							'is_editable' => $is_editable,
 							'is_dir' => is_dir($i),
 							'is_deletable' => $allow_delete && ( (!is_dir($i) && is_writable( $directory ) ) || ( is_dir($i) && is_writable($directory) && $this->sfm_is_recursively_deleteable($i) ) ) && $is_deletable,
+							'deletion_nonce' => $deletion_nonce,
 							'is_readable' => is_readable($i),
 							'is_writable' => is_writable($i),
 							'is_executable' => is_executable($i),
@@ -312,15 +333,25 @@ class Simple_File_Manager_Admin {
 
 				// Save edits and return message
 
-				if ( isset( $_POST['submit'] ) ) {
+				if ( isset( $_POST['submit'] ) && isset( $_POST['_wpnonce'] ) ) {
 
 					$current_content = file_get_contents( $file );
 
 					$new_content = wp_unslash( $_POST['editor-content'] );
 
-					file_put_contents( $file, $new_content );
+					$nonce = $_POST['_wpnonce'];
 
-					$success_message = '<div class="edit-success"><p>File edited successfully. You can continue editing.</p></div>';
+					if ( !empty( $nonce ) && wp_verify_nonce( $nonce, 'update-file_' . $file_path ) ) {
+
+						file_put_contents( $file, $new_content );
+
+						$success_message = '<div class="edit-message edit-success"><p>File edited successfully. You can continue editing.</p></div>';
+
+					} else {
+
+						$success_message = '<div class="edit-message edit-fail"><p>Invalid nonce. File was not updated. </p></div>';
+
+					}
 
 				} else {
 
@@ -412,7 +443,17 @@ class Simple_File_Manager_Admin {
 
 				if ( ! is_file( $file ) ) {
 
-					$result = file_put_contents( $file, '' );
+					$nonce = $_GET['_cfilenonce'];
+
+					if ( !empty( $nonce ) && wp_verify_nonce( $nonce, 'create-file_' . $_COOKIE['_sfm_xsrf'] . $uid ) ) {
+
+						$result = file_put_contents( $file, '' );
+
+					} else {
+
+						$result = false;
+
+					}
 
 					if ( $result !== false ) {
 
@@ -447,22 +488,35 @@ class Simple_File_Manager_Admin {
 
 			} elseif ( ( isset( $_GET['do'] ) ) && ( $_GET['do'] == 'createfolder' ) ) {
 
+				$file_array = explode('/', $file);
+
+				$new_folder_name = array_pop( $file_array ); 
+
 				// Create new folder
 
 				if ( ! is_dir( $file ) ) {
 
-					mkdir( $file );
+					$nonce = $_GET['_cfoldernonce'];
 
-					echo json_encode([
-						'success' => true,
-						'message' => 'Folder has been created.'
-					]);
+					if ( !empty( $nonce ) && wp_verify_nonce( $nonce, 'create-folder_' . $_COOKIE['_sfm_xsrf'] . $uid ) ) {
+
+						mkdir( $file );
+
+						echo json_encode([
+							'success' => true,
+							'message' => 'Folder has been created.'
+						]);
+
+					} else {
+
+						echo json_encode([
+							'success' => false,
+							'message' => 'Nonce check failed. Folder was not created.'
+						]);
+
+					}
 
 				} else {
-
-					$file_array = explode('/', $file);
-
-					$new_folder_name = array_pop( $file_array ); 
 
 					echo json_encode([
 						'success' => false,
@@ -477,25 +531,32 @@ class Simple_File_Manager_Admin {
 
 				// Upload file
 
-				$file_name = basename( $_FILES['new-upload']['name'] );
+				$nonce = $_POST['_ufilenonce'];
 
-				// Hash of folder location where file upload was initiated
-				// Includes the '#' symbol in front
-				$origin_hash = $_POST['url-hash'];
+				if ( !empty( $nonce ) && wp_verify_nonce( $nonce, 'upload-file_' . $_COOKIE['_sfm_xsrf'] . $uid ) ) {
 
-				// e.g. /home/root/path/wp-content/uploads/temp/
-				$upload_dir = urldecode( str_replace( '#', '', $origin_hash ) ) . '/';
+					$file_name = basename( $_FILES['new-upload']['name'] );
 
-				// e.g. /home/root/path/wp-content/uploads/temp/filename.jpg
-				$new_file_path = $upload_dir . $file_name;
+					// Hash of folder location where file upload was initiated
+					// Includes the '#' symbol in front
+					$origin_hash = $_POST['url-hash'];
 
-				// Move file from temporary storage to the new path
-				move_uploaded_file( $_FILES['new-upload']['tmp_name'], $new_file_path );
+					// e.g. /home/root/path/wp-content/uploads/temp/
+					$upload_dir = urldecode( str_replace( '#', '', $origin_hash ) ) . '/';
 
-				$redirect_url = get_site_url() . '/wp-admin/tools.php?page=' . $this->plugin_name . $origin_hash;
+					// e.g. /home/root/path/wp-content/uploads/temp/filename.jpg
+					$new_file_path = $upload_dir . $file_name;
 
-				wp_safe_redirect( $redirect_url );
-				exit;
+					// Move file from temporary storage to the new path
+					move_uploaded_file( $_FILES['new-upload']['tmp_name'], $new_file_path );
+
+					$redirect_url = get_site_url() . '/wp-admin/tools.php?page=' . $this->plugin_name . $origin_hash;
+
+					wp_safe_redirect( $redirect_url );
+					exit;
+
+
+				}
 
 			} elseif ( ( isset( $_POST['do'] ) ) && ( $_POST['do'] == 'delete' ) ) {
 
@@ -503,12 +564,25 @@ class Simple_File_Manager_Admin {
 
 				if( $allow_delete ) {
 
-					$this->sfm_delete_recursively( $file );
+					$nonce = $_POST['nonce'];
 
-					echo json_encode([
-						'success' => true,
-						'message' => 'Deletion was successful.'
-					]);
+					if ( !empty( $nonce ) && wp_verify_nonce( $nonce, 'deletion-nonce_' . $_COOKIE['_sfm_xsrf'] . $uid ) ) {
+
+						$this->sfm_delete_recursively( $file );
+
+						echo json_encode([
+							'success' => true,
+							'message' => 'Deletion was successful.'
+						]);
+
+					} else {
+
+						echo json_encode([
+							'success' => false,
+							'message' => 'Deletion was not successful.'
+						]);
+
+					}
 
 				}
 
@@ -520,9 +594,13 @@ class Simple_File_Manager_Admin {
 
 			$html_output = '';
 
-			if ( ! isset( $_GET['do'] ) ) {
+			if ( ( ! isset( $_GET['do'] ) ) || ( ( isset( $_GET['do'] ) ) && ( $_GET['do'] == 'list' ) ) ) {
 
 				// Output default list view with action buttons
+
+                $upload_file_nonce = wp_create_nonce( 'upload-file_'. $_COOKIE['_sfm_xsrf'] . $uid );
+                $create_file_nonce = wp_create_nonce( 'create-file_' . $_COOKIE['_sfm_xsrf'] . $uid );
+                $create_folder_nonce = wp_create_nonce( 'create-folder_'. $_COOKIE['_sfm_xsrf'] . $uid );
 
 				$html_output .= '<div id="top">
 									<div id="breadcrumb">&nbsp;</div>
@@ -533,16 +611,17 @@ class Simple_File_Manager_Admin {
 								<div class="action-inputs">
 									<div class="action-upload">
 											<input type="hidden" name="MAX_FILE_SIZE" value="1048576" />
+											<input type="hidden" name="_ufilenonce" id="upload-file-nonce" value="'.$upload_file_nonce.'" />
 											<input type="hidden" name="url-hash" id="upload-file-url-hash" value="" />
 											<input type="file" name="new-upload" id="new-upload">
 											<input type="submit" id="upload-file" class="button action button-primary upload-file" value="Upload Now" formaction="'. get_site_url() .'/wp-admin/tools.php?page=simple-file-manager&do=uploadfile" />
 											<button class="button action cancel-action cancel-upload">Cancel</button>
 									</div>
 									<div class="action-newfile">
-										<input type="text" name="new-filename" id="new-filename" value="" placeholder="e.g. filename.php"><button id="create-file" class="button action button-primary create-file">Create File</button><button class="button action cancel-action cancel-newfile">Cancel</button>
+										<input type="text" name="new-filename" id="new-filename" value="" placeholder="e.g. filename.php"><input type="hidden" name="_cfilenonce" id="create-file-nonce" value="'.$create_file_nonce.'" /><button id="create-file" class="button action button-primary create-file">Create File</button><button class="button action cancel-action cancel-newfile">Cancel</button>
 									</div>
 									<div class="action-newfolder">
-										<input type="text" name="new-foldername" id="new-foldername" value="" placeholder="e.g. folder-name"><button  id="create-folder" class="button action button-primary create-folder">Create Folder</button><button class="button action cancel-action cancel-newfolder">Cancel</button>
+										<input type="text" name="new-foldername" id="new-foldername" value="" placeholder="e.g. folder-name"><input type="hidden" name="_cfoldernonce" id="create-folder-nonce" value="'.$create_folder_nonce.'" /><button  id="create-folder" class="button action button-primary create-folder">Create Folder</button><button class="button action cancel-action cancel-newfolder">Cancel</button>
 									</div>
 								</div>
 								<table id="table"><thead><tr>
@@ -591,8 +670,11 @@ class Simple_File_Manager_Admin {
 
 				} elseif ( $_GET['do'] == 'edit' ) {
 
+					$nonce = wp_create_nonce( 'update-file_' . $file_path );
+
 					$html_output .= '<div id="editor-content"><form method="post">
 										<textarea id="codemirror" name="editor-content" rows="25">' . $editor_content . '</textarea>
+										<input type="hidden" name="_wpnonce" value="'.$nonce.'" />
 										<input type="submit" name="submit" value="Update File" class="button button-primary" />
 									</form></div>';
 

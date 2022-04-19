@@ -313,10 +313,17 @@
     display: none !important;
 }
 
-.sfm .edit-success {
+.sfm .edit-message {
     background: #fff;
     border: 1px solid #c3c4c7;
-    border-left: 4px solid #00a32a;
     margin: 1.5em 0 0;
     padding: 8px 14px;
+}
+
+.sfm .edit-message.edit-success {
+    border-left: 4px solid #00a32a;    
+}
+
+.sfm .edit-message.edit-fail {
+    border-left: 4px solid #ff4c62;    
 }

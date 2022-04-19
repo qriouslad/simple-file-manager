@@ -84,7 +84,7 @@
 			.text(data.name);
 		var $view_link = '<a href="?page=simple-file-manager&amp;do=view&amp;file=' + encodeURIComponent(data.path) + '" class="view">View</a>';			
 		var $edit_link = '<a href="?page=simple-file-manager&amp;do=edit&amp;file='+ encodeURIComponent(data.path) + '" class="edit">Edit</a>';
-		var $delete_link = '<a href="#" data-file="' + data.path + '" class="delete">Delete</a>';
+		var $delete_link = '<a href="#" data-file="' + data.path + '" data-nonce="' + data.deletion_nonce + '" class="delete">Delete</a>';
 
 		var $action_links = '';
 
@@ -167,8 +167,9 @@
 	function createFile(fileName) {
 
 		var hashval = window.location.hash.substr(1);
+		var createFileNonce = document.getElementById("create-file-nonce").value;
 
-		$.get('?page=simple-file-manager&do=createfile&file='+ hashval + '%2F' + fileName,function(data) {
+		$.get('?page=simple-file-manager&do=createfile&_cfilenonce=' + createFileNonce + '&file='+ hashval + '%2F' + fileName,function(data) {
 
 			if(data.success) {
 				$('.cancel-newfile').click();
@@ -184,8 +185,9 @@
 	function createFolder(folderName) {
 
 		var hashval = window.location.hash.substr(1);
+		var createFolderNonce = document.getElementById("create-folder-nonce").value;
 
-		$.get('?page=simple-file-manager&do=createfolder&file='+ hashval + '%2F' + folderName,function(data) {
+		$.get('?page=simple-file-manager&do=createfolder&_cfoldernonce=' + createFolderNonce + '&file='+ hashval + '%2F' + folderName,function(data) {
 
 			if(data.success) {
 				$('.cancel-newfolder').click();
@@ -213,7 +215,7 @@
         $(addReview).prependTo('.sfm .csf-header-right');
 
 		setTimeout(function(){
-		  $('.edit-success').fadeOut( 1000 );
+		  $('.edit-message').fadeOut( 1000 );
 		}, 2000);
 
 		$('.upload-button').on('click', function(e) {
@@ -362,7 +364,7 @@
 		// Delete file / folder
 
 		$('#table').on('click','.delete',function(data) {
-			$.post("",{'do':'delete',file:$(this).attr('data-file'),xsrf:XSRF},function(response){
+			$.post("",{'do':'delete','file':$(this).attr('data-file'),'nonce':$(this).attr('data-nonce'),'xsrf':XSRF},function(response){
 				list();
 			},'json');
 			return false;
