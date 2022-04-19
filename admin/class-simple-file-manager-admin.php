@@ -167,6 +167,9 @@ class Simple_File_Manager_Admin {
 			// Security options
 			$allow_show_folders = true; // Set to false to hide all subdirectories
 
+			// Deletion options
+			$allow_delete = true; // Allow deletion of folders and files
+
 			// Matching files not allowed to be uploaded. Must be an array.
 			$disallowed_patterns = []; // e.g. ['*.php']  
 
@@ -175,6 +178,22 @@ class Simple_File_Manager_Admin {
 
 			// must be in UTF-8 or `basename` doesn't work
 			setlocale(LC_ALL,'en_US.UTF-8');
+
+			// Set cookie and get/set user ID for use in nonces
+
+			if( !$_COOKIE['_sfm_xsrf'] ) {
+				setcookie( '_sfm_xsrf', bin2hex( openssl_random_pseudo_bytes( 16 ) ) );
+			}
+
+			if ( is_user_logged_in() ) {
+
+				$uid = (string) get_current_user_id();
+
+			} else {
+
+				$uid = '007';
+
+			}
 
 			// Set WordPress root path
 
@@ -189,10 +208,19 @@ class Simple_File_Manager_Admin {
 
 				$file = $file_path ? $file_path : $abspath;
 
+			} else {
+
+				$file = $abspath;
+
 			}
 
 			if ( ( isset( $_GET['do'] ) ) && ( $_GET['do'] == 'list' ) ) {
-			// Return list of directories and files data for frontend AJAX request
+
+				// Create deletion nonce for javascript
+
+				$deletion_nonce = wp_create_nonce( 'deletion-nonce_' . $_COOKIE['_sfm_xsrf'] . $uid );
+
+				// Return list of directories and files data for frontend AJAX request
 
 				if ( is_dir( $file ) ) {
 
@@ -200,16 +228,60 @@ class Simple_File_Manager_Admin {
 					$result = [];
 					$files = array_diff(scandir($directory), ['.','..']);
 
-					foreach ($files as $entry) if (!$this->is_entry_ignored($entry, $allow_show_folders, $hidden_patterns)) {
+					$n = 0;
+
+					foreach ($files as $entry) if (!$this->sfm_is_entry_ignored($entry, $allow_show_folders, $hidden_patterns)) {
 
 						$i = $directory . '/' . $entry;
 						$path = preg_replace('@^\./@', '', $i);
-						$mime_type = $this->get_mime_type( $path );
+						$mime_type = $this->sfm_mime_type( $path );
+
+						// Check if $path is editable or not
 
 						if ( ( strpos( $mime_type, 'text' ) !== false ) || ( strpos( $mime_type, 'php' ) !== false ) || ( strpos( $mime_type, 'json' ) !== false ) || ( strpos( $mime_type, 'html' ) !== false ) || ( strpos( $mime_type, 'empty' ) !== false ) ) {
 							$is_viewable = true;
+
+							if ( $this->sfm_is_wpcore_path( $path ) ) {
+
+								if ( strpos( $path, 'wp-config.php' ) !== false ) {
+
+									$is_editable = true;
+
+								} else {
+
+									$is_editable = false;
+
+								}
+
+							} else {
+
+								$is_editable = true;
+
+							}
+
 						} else {
 							$is_viewable = false;						
+							$is_editable = false;
+						}
+
+						// Check if $path is deletable or not
+
+						if ( ( strpos( $path, 'index.php' ) !== false ) && ( strpos( $path, 'wp-content' ) === false ) ) {
+
+							$is_deletable = false;
+
+						} elseif ( ( strpos( $path, 'index.php' ) !== false ) && ( strpos( $path, 'wp-content' ) !== false ) ) {
+
+							$is_deletable = true;
+
+						} elseif ( $this->sfm_is_wpcore_path( $path ) === false ) {
+
+							$is_deletable = true;
+
+						} else {
+
+							$is_deletable = false;
+
 						}
 
 						$relpath = str_replace( ABSPATH, '', $i );
@@ -223,11 +295,16 @@ class Simple_File_Manager_Admin {
 							'relpath'	=> $relpath,
 							'mime_type'	=> $mime_type,
 							'is_viewable' => $is_viewable,
+							'is_editable' => $is_editable,
 							'is_dir' => is_dir($i),
+							'is_deletable' => $allow_delete && ( (!is_dir($i) && is_writable( $directory ) ) || ( is_dir($i) && is_writable($directory) && $this->sfm_is_recursively_deleteable($i) ) ) && $is_deletable,
+							'deletion_nonce' => $deletion_nonce,
 							'is_readable' => is_readable($i),
 							'is_writable' => is_writable($i),
 							'is_executable' => is_executable($i),
 						];
+
+						$n++;
 
 					}
 
@@ -239,7 +316,7 @@ class Simple_File_Manager_Admin {
 
 				} else {
 
-					$this->err(412,"Not a Directory");
+					$this->sfm_err(412,"Not a Directory");
 
 				}
 
@@ -254,21 +331,35 @@ class Simple_File_Manager_Admin {
 
 			} elseif ( ( isset( $_GET['do'] ) ) && ( ( $_GET['do'] == 'view' ) || ( $_GET['do'] == 'edit' ) ) ) {
 
-				if ( isset( $_POST['submit'] ) ) {
+				// Save edits and return message
+
+				if ( isset( $_POST['submit'] ) && isset( $_POST['_wpnonce'] ) ) {
 
 					$current_content = file_get_contents( $file );
 
 					$new_content = wp_unslash( $_POST['editor-content'] );
 
-					file_put_contents( $file, $new_content );
+					$nonce = $_POST['_wpnonce'];
 
-					$success_message = '<div class="edit-success"><p>File edited successfully. You can continue editing.</p></div>';
+					if ( !empty( $nonce ) && wp_verify_nonce( $nonce, 'update-file_' . $file_path ) ) {
+
+						file_put_contents( $file, $new_content );
+
+						$success_message = '<div class="edit-message edit-success"><p>File edited successfully. You can continue editing.</p></div>';
+
+					} else {
+
+						$success_message = '<div class="edit-message edit-fail"><p>Invalid nonce. File was not updated. </p></div>';
+
+					}
 
 				} else {
 
 					$success_message = '';
 
 				}
+
+				// Get file content and return default content when file is empty
 
 				if ( empty( file_get_contents( $file ) ) ) {
 
@@ -284,14 +375,14 @@ class Simple_File_Manager_Admin {
 
 				} else {
 
-			        // $content = htmlentities( file_get_contents( $file ) );
-
 			        $editor_content = esc_textarea( file_get_contents( $file ) );
 
 				}
 
 		        $filename = '/' . str_replace( ABSPATH, '', $file );
 		        $file_extension = pathinfo( $file, PATHINFO_EXTENSION );
+
+		        // Set CodeMirror mode based on file extension
 
 		        if ( $file_extension == 'php' ) {
 	        		$mode = 'application/x-httpd-php';
@@ -321,11 +412,13 @@ class Simple_File_Manager_Admin {
 
 			} elseif ( ( isset( $_GET['do'] ) ) && ( $_GET['do'] == 'download' ) ) {
 
+				// Process file download
+
 				foreach( $disallowed_patterns as $pattern ) {
 
 					if(fnmatch($pattern, $file)) {
 
-						$this->err(403,"Files of this type are not allowed.");
+						$this->sfm_err(403,"Files of this type are not allowed.");
 
 					}
 
@@ -346,9 +439,21 @@ class Simple_File_Manager_Admin {
 
 			} elseif ( ( isset( $_GET['do'] ) ) && ( $_GET['do'] == 'createfile' ) ) {
 
+				// Create new file
+
 				if ( ! is_file( $file ) ) {
 
-					$result = file_put_contents( $file, '' );
+					$nonce = $_GET['_cfilenonce'];
+
+					if ( !empty( $nonce ) && wp_verify_nonce( $nonce, 'create-file_' . $_COOKIE['_sfm_xsrf'] . $uid ) ) {
+
+						$result = file_put_contents( $file, '' );
+
+					} else {
+
+						$result = false;
+
+					}
 
 					if ( $result !== false ) {
 
@@ -383,20 +488,35 @@ class Simple_File_Manager_Admin {
 
 			} elseif ( ( isset( $_GET['do'] ) ) && ( $_GET['do'] == 'createfolder' ) ) {
 
+				$file_array = explode('/', $file);
+
+				$new_folder_name = array_pop( $file_array ); 
+
+				// Create new folder
+
 				if ( ! is_dir( $file ) ) {
 
-					mkdir( $file );
+					$nonce = $_GET['_cfoldernonce'];
 
-					echo json_encode([
-						'success' => true,
-						'message' => 'Folder has been created.'
-					]);
+					if ( !empty( $nonce ) && wp_verify_nonce( $nonce, 'create-folder_' . $_COOKIE['_sfm_xsrf'] . $uid ) ) {
+
+						mkdir( $file );
+
+						echo json_encode([
+							'success' => true,
+							'message' => 'Folder has been created.'
+						]);
+
+					} else {
+
+						echo json_encode([
+							'success' => false,
+							'message' => 'Nonce check failed. Folder was not created.'
+						]);
+
+					}
 
 				} else {
-
-					$file_array = explode('/', $file);
-
-					$new_folder_name = array_pop( $file_array ); 
 
 					echo json_encode([
 						'success' => false,
@@ -409,34 +529,63 @@ class Simple_File_Manager_Admin {
 
 			} elseif ( ( isset( $_GET['do'] ) ) && ( $_GET['do'] == 'uploadfile' ) ) {
 
-				$file_name = basename( $_FILES['new-upload']['name'] );
+				// Upload file
 
-				do_action( 'inspect', [ 'file_name', $file_name ] );
+				$nonce = $_POST['_ufilenonce'];
 
-				// Hash of folder location where file upload was initiated
-				// Includes the '#' symbol in front
-				$origin_hash = $_POST['url-hash'];
+				if ( !empty( $nonce ) && wp_verify_nonce( $nonce, 'upload-file_' . $_COOKIE['_sfm_xsrf'] . $uid ) ) {
 
-				do_action( 'inspect', [ 'origin_hash', $origin_hash ] );
+					$file_name = basename( $_FILES['new-upload']['name'] );
 
-				// e.g. /home/root/path/wp-content/uploads/temp/
-				$upload_dir = urldecode( str_replace( '#', '', $origin_hash ) ) . '/';
+					// Hash of folder location where file upload was initiated
+					// Includes the '#' symbol in front
+					$origin_hash = $_POST['url-hash'];
 
-				do_action( 'inspect', [ 'upload_dir', $upload_dir ] );
+					// e.g. /home/root/path/wp-content/uploads/temp/
+					$upload_dir = urldecode( str_replace( '#', '', $origin_hash ) ) . '/';
 
-				// e.g. /home/root/path/wp-content/uploads/temp/filename.jpg
-				$new_file_path = $upload_dir . $file_name;
+					// e.g. /home/root/path/wp-content/uploads/temp/filename.jpg
+					$new_file_path = $upload_dir . $file_name;
 
-				do_action( 'inspect', [ 'new_file_path', $new_file_path ] );
+					// Move file from temporary storage to the new path
+					move_uploaded_file( $_FILES['new-upload']['tmp_name'], $new_file_path );
 
-				// Move file from temporary storage to the new path
-				move_uploaded_file( $_FILES['new-upload']['tmp_name'], $new_file_path );
+					$redirect_url = get_site_url() . '/wp-admin/tools.php?page=' . $this->plugin_name . $origin_hash;
 
-				$redirect_url = get_site_url() . '/wp-admin/tools.php?page=' . $this->plugin_name . $origin_hash;
+					wp_safe_redirect( $redirect_url );
+					exit;
 
-				do_action( 'inspect', [ 'redirect_url_success', $redirect_url ] );
 
-				wp_safe_redirect( $redirect_url );
+				}
+
+			} elseif ( ( isset( $_POST['do'] ) ) && ( $_POST['do'] == 'delete' ) ) {
+
+				// Delete file or folder (recursively)
+
+				if( $allow_delete ) {
+
+					$nonce = $_POST['nonce'];
+
+					if ( !empty( $nonce ) && wp_verify_nonce( $nonce, 'deletion-nonce_' . $_COOKIE['_sfm_xsrf'] . $uid ) ) {
+
+						$this->sfm_delete_recursively( $file );
+
+						echo json_encode([
+							'success' => true,
+							'message' => 'Deletion was successful.'
+						]);
+
+					} else {
+
+						echo json_encode([
+							'success' => false,
+							'message' => 'Deletion was not successful.'
+						]);
+
+					}
+
+				}
+
 				exit;
 
 			} else {}
@@ -445,7 +594,13 @@ class Simple_File_Manager_Admin {
 
 			$html_output = '';
 
-			if ( ! isset( $_GET['do'] ) ) {
+			if ( ( ! isset( $_GET['do'] ) ) || ( ( isset( $_GET['do'] ) ) && ( $_GET['do'] == 'list' ) ) ) {
+
+				// Output default list view with action buttons
+
+                $upload_file_nonce = wp_create_nonce( 'upload-file_'. $_COOKIE['_sfm_xsrf'] . $uid );
+                $create_file_nonce = wp_create_nonce( 'create-file_' . $_COOKIE['_sfm_xsrf'] . $uid );
+                $create_folder_nonce = wp_create_nonce( 'create-folder_'. $_COOKIE['_sfm_xsrf'] . $uid );
 
 				$html_output .= '<div id="top">
 									<div id="breadcrumb">&nbsp;</div>
@@ -456,35 +611,39 @@ class Simple_File_Manager_Admin {
 								<div class="action-inputs">
 									<div class="action-upload">
 											<input type="hidden" name="MAX_FILE_SIZE" value="1048576" />
+											<input type="hidden" name="_ufilenonce" id="upload-file-nonce" value="'.$upload_file_nonce.'" />
 											<input type="hidden" name="url-hash" id="upload-file-url-hash" value="" />
 											<input type="file" name="new-upload" id="new-upload">
 											<input type="submit" id="upload-file" class="button action button-primary upload-file" value="Upload Now" formaction="'. get_site_url() .'/wp-admin/tools.php?page=simple-file-manager&do=uploadfile" />
 											<button class="button action cancel-action cancel-upload">Cancel</button>
 									</div>
 									<div class="action-newfile">
-										<input type="text" name="new-filename" id="new-filename" value="" placeholder="e.g. filename.php"><button id="create-file" class="button action button-primary create-file">Create File</button><button class="button action cancel-action cancel-newfile">Cancel</button>
+										<input type="text" name="new-filename" id="new-filename" value="" placeholder="e.g. filename.php"><input type="hidden" name="_cfilenonce" id="create-file-nonce" value="'.$create_file_nonce.'" /><button id="create-file" class="button action button-primary create-file">Create File</button><button class="button action cancel-action cancel-newfile">Cancel</button>
 									</div>
 									<div class="action-newfolder">
-										<input type="text" name="new-foldername" id="new-foldername" value="" placeholder="e.g. folder-name"><button  id="create-folder" class="button action button-primary create-folder">Create Folder</button><button class="button action cancel-action cancel-newfolder">Cancel</button>
+										<input type="text" name="new-foldername" id="new-foldername" value="" placeholder="e.g. folder-name"><input type="hidden" name="_cfoldernonce" id="create-folder-nonce" value="'.$create_folder_nonce.'" /><button  id="create-folder" class="button action button-primary create-folder">Create Folder</button><button class="button action cancel-action cancel-newfolder">Cancel</button>
 									</div>
 								</div>
 								<table id="table"><thead><tr>
-									<th>Name</th>
-									<th>Actions</th>
-									<th>Size</th>
-									<th>Modified</th>
-									<th>Permissions</th>
+									<th><span>Name</span></th>
+									<th class="th-actions"><span>Actions</span></th>
+									<th><span>Size</span></th>
+									<th><span>Modified</span></th>
+									<th><span>Permissions</span></th>
 								</tr></thead><tbody id="list"></tbody></table>';
 
 			} elseif ( ( isset( $_GET['do'] ) ) && ( ( $_GET['do'] == 'view' ) || ( $_GET['do'] == 'edit' ) ) ) {
 
 				if ( $_GET['do'] == 'view' ) {
 
-					// $read_only = 'readOnly: "nocursor",';
+					// Set CodeMirror to read only mode
+
 					$read_only = 'readOnly: true,';
 					$do_is = 'viewing';
 
 				} elseif ( $_GET['do'] == 'edit' ) {
+
+					// Set CodeMirror to edit mode
 
 					$read_only = 'readOnly: false,';
 					$do_is = 'editing';
@@ -497,9 +656,13 @@ class Simple_File_Manager_Admin {
 
 				}
 
+				// Top part of file content
+
 				$html_output .= '<div class="viewer-nav viewer-top">
 									<a href="#" class="back-step" onclick="window.history.back()"><span>&#10132;</span>Back</a><span class="viewing">You are ' . $do_is . ' <span class="filename">' . $filename . '</span></span>
 								</div>';
+
+				// Output file content in view / edit mode
 
 				if ( $_GET['do'] == 'view' ) {
 
@@ -507,8 +670,11 @@ class Simple_File_Manager_Admin {
 
 				} elseif ( $_GET['do'] == 'edit' ) {
 
+					$nonce = wp_create_nonce( 'update-file_' . $file_path );
+
 					$html_output .= '<div id="editor-content"><form method="post">
 										<textarea id="codemirror" name="editor-content" rows="25">' . $editor_content . '</textarea>
+										<input type="hidden" name="_wpnonce" value="'.$nonce.'" />
 										<input type="submit" name="submit" value="Update File" class="button button-primary" />
 									</form></div>';
 
@@ -517,6 +683,8 @@ class Simple_File_Manager_Admin {
 				$html_output .= '<div class="viewer-nav viewer-bottom">
 										<a href="#" class="back-step" onclick="window.history.back()"><span>&#10132;</span>Back</a>
 								</div>';
+
+				// Script to handle CodeMirror behaviour
 
 				$html_output .= '<script>
 									jQuery(document).ready( function() {
@@ -549,7 +717,7 @@ class Simple_File_Manager_Admin {
 	 * @link http://php.net/manual/en/function.realpath.php#84012
 	 * @since 1.0.0
 	 */
-	public function get_absolute_path( $path ) {
+	public function sfm_get_absolute_path( $path ) {
 
 		$path = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $path);
 		$parts = explode(DIRECTORY_SEPARATOR, $path);
@@ -576,7 +744,7 @@ class Simple_File_Manager_Admin {
 	 * 
 	 * @since 1.0.0
 	 */
-	public function is_entry_ignored($entry, $allow_show_folders, $hidden_patterns) {
+	public function sfm_is_entry_ignored($entry, $allow_show_folders, $hidden_patterns) {
 
 		if ($entry === basename(__FILE__)) {
 			return true;
@@ -603,7 +771,7 @@ class Simple_File_Manager_Admin {
 	 *
 	 * @since 1.0.0
 	 */
-	public function err($code,$msg) {
+	public function sfm_err($code,$msg) {
 		// http_response_code($code);
 		// header("Content-Type: application/json");
 		// echo json_encode(['error' => ['code'=>intval($code), 'msg' => $msg]]);
@@ -616,7 +784,7 @@ class Simple_File_Manager_Admin {
 	 *
 	 * @since 1.0.0
 	 */
-	public function asBytes($ini_v) {
+	public function sfm_as_bytes($ini_v) {
 
 		$ini_v = trim($ini_v);
 		$s = ['g'=> 1<<30, 'm' => 1<<20, 'k' => 1<<10];
@@ -631,7 +799,7 @@ class Simple_File_Manager_Admin {
 	 * @link https://github.com/prasathmani/tinyfilemanager
 	 * @since 1.0.0
 	 */
-	public function get_mime_type( $file_path ) {
+	public function sfm_mime_type( $file_path ) {
 
 	    if ( function_exists('finfo_open') ) {
 
@@ -649,6 +817,91 @@ class Simple_File_Manager_Admin {
 	        return '--';
 
 	    }
+
+	}
+
+	/** 
+	 * Check if directory is recursively deletable
+	 *
+	 * @since 1.3.0
+	 */
+	public function sfm_is_recursively_deleteable($d) {
+		$stack = [$d];
+		while($dir = array_pop($stack)) {
+			if(!is_readable($dir) || !is_writable($dir))
+				return false;
+			$files = array_diff(scandir($dir), ['.','..']);
+			foreach($files as $file) if(is_dir($file)) {
+				$stack[] = "$dir/$file";
+			}
+		}
+		return true;
+	}
+
+	/**
+	 * Delete file or folder recursively
+	 *
+	 * @since 1.3.0
+	 */
+	public function sfm_delete_recursively( $dir ) {
+
+		if ( is_dir( $dir ) ) {
+
+			$files = array_diff( scandir( $dir ), ['.','..'] );
+
+			foreach ( $files as $file ) {
+
+				self::sfm_delete_recursively( "$dir/$file" );
+
+			}
+
+			rmdir( $dir );
+
+		} else {
+
+			unlink($dir);
+		}
+
+	}
+
+	/** 
+	 * Check if path is part of WP core folders and files
+	 *
+	 * @since 1.3.0
+	 */
+	public function sfm_is_wpcore_path( $path ) {
+
+		$disallowed_paths = array(
+			ABSPATH . 'wp-admin',
+			ABSPATH . 'wp-content',
+			ABSPATH . 'wp-includes',
+			ABSPATH . 'wp-content/plugins',
+			ABSPATH . 'wp-content/themes',
+			ABSPATH . 'wp-content/uploads',
+			ABSPATH . 'wp-activate.php',
+			ABSPATH . 'wp-blog-header.php',
+			ABSPATH . 'wp-comments-post.php',
+			ABSPATH . 'wp-config.php',
+			ABSPATH . 'wp-cron.php',
+			ABSPATH . 'wp-links-opml.php',
+			ABSPATH . 'wp-load.php',
+			ABSPATH . 'wp-login.php',
+			ABSPATH . 'wp-mail.php',
+			ABSPATH . 'wp-settings.php',
+			ABSPATH . 'wp-signup.php',
+			ABSPATH . 'wp-trackback.php',
+			ABSPATH . 'xmlrpc.php',
+		);
+
+		if ( ( strpos( $path, 'wp-admin' ) !== false ) || ( strpos( $path, 'wp-includes' ) !== false ) || in_array( $path, $disallowed_paths ) ) {
+
+			return true; // $path is part of WP core
+
+		} else {
+
+			return false; // $path is NOT part of WP core
+
+		}
 
 	}
 
