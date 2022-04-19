@@ -5,7 +5,7 @@ Donate link: https://paypal.me/qriouslad
 Tags: file manager, file viewer, code viewer, developer  
 Requires at least: 4.8  
 Tested up to: 5.9.3  
-Stable tag: 1.2.0  
+Stable tag: 1.3.0  
 Requires PHP: 5.6  
 License: GPLv2 or later  
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -44,6 +44,10 @@ System Dashboard was built with: [WordPress Plugin Boilerplate](https://github.c
 
 ## Changelog
 
+### 1.3.0 (2022.04.19)
+
+* SECURITY: implement nonces for file edit, file upload, file creation and folder creation
+
 ### 1.2.0 (2022.04.16)
 
 * NEW: file upload, file creation and folder creation
@@ -51,8 +55,8 @@ System Dashboard was built with: [WordPress Plugin Boilerplate](https://github.c
 
 ### 1.1.0 (April 2022)
 
-* New: file editing is now possible and uses CodeMirror for the editor
-* Replace prism.js with CodeMirror for syntax highlighting when viewing files
+* NEW: file editing is now possible and uses CodeMirror for the editor
+* ENHANCEMENT: Replace prism.js with CodeMirror for syntax highlighting when viewing files
 
 ### 1.0.0 (April 2022)
 
