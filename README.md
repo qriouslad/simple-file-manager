@@ -5,7 +5,7 @@ Donate link: https://paypal.me/qriouslad
 Tags: file manager, file viewer, code viewer, developer  
 Requires at least: 4.8  
 Tested up to: 5.9.3  
-Stable tag: 1.3.0  
+Stable tag: 1.3.1  
 Requires PHP: 5.6  
 License: GPLv2 or later  
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -43,6 +43,11 @@ Simple File Manager is based on the [Simple File Manager](https://github.com/jca
 System Dashboard was built with: [WordPress Plugin Boilerplate](https://github.com/devinvinson/WordPress-Plugin-Boilerplate/) | [wppb.me](https://wppb.me/) | [CodeStar framework](https://github.com/Codestar/codestar-framework)
 
 ## Changelog
+
+### 1.3.1 (2022.04.25)
+
+* SECURITY: properly sanitize inputs and esc file content for viewing / editing
+* NEW: file download feature
 
 ### 1.3.0 (2022.04.19)
 
