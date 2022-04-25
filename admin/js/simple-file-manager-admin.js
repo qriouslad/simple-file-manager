@@ -49,8 +49,8 @@
 		return false;
 	});
 
-	$(window).on('hashchange',list).trigger('hashchange');
 	$(window).on('load',list);
+	$(window).on('hashchange',list).trigger('hashchange');
 
 	function list() {
 
@@ -68,7 +68,10 @@
 				!data.results.length && $('#list').append('<tr><td class="empty" colspan=5>This folder is empty</td></tr>')
 				data.is_writable ? $('.fmbody .csf-fieldset').removeClass('no_write') : $('.fmbody .csf-fieldset').addClass('no_write');
 			} else {
-				console.warn(data.error.msg);
+				// console.warn(data.error.msg);
+				$('#top').hide();
+				$('#table').css('margin-top','25px');
+				$('#list').append('<tr><td class="empty" colspan=5>' + data.error_message + '</td></tr>');
 			}
 
 		},'json');
@@ -76,14 +79,16 @@
 
 	function renderFileRow(data) {
 
-		// var $dl_link = $('<a/>').attr('href','?page=simple-file-manager&do=download&file='+ encodeURIComponent(data.path))
-			// .addClass('download').text('Download');
-
 		var $filename_view_link = $('<a class="name" />')
 			.attr('href', data.is_dir ? '#' + encodeURIComponent(data.path) : ( data.is_viewable ? '?page=simple-file-manager&do=view&file='+ encodeURIComponent(data.path) : '../' + data.relpath ) )
 			.text(data.name);
+
 		var $view_link = '<a href="?page=simple-file-manager&amp;do=view&amp;file=' + encodeURIComponent(data.path) + '" class="view">View</a>';			
+
 		var $edit_link = '<a href="?page=simple-file-manager&amp;do=edit&amp;file='+ encodeURIComponent(data.path) + '" class="edit">Edit</a>';
+
+		var $download_link = '<a href="?page=simple-file-manager&amp;do=download&amp;file=' + encodeURIComponent(data.path) + '" class="download">Download</a>';
+
 		var $delete_link = '<a href="#" data-file="' + data.path + '" data-nonce="' + data.deletion_nonce + '" class="delete">Delete</a>';
 
 		var $action_links = '';
@@ -95,6 +100,8 @@
 		if ( data.is_editable ) {
 			$action_links += $edit_link;
 		}
+
+		$action_links += $download_link;
 
 		if ( data.is_deletable ) {
 			$action_links += $delete_link;			
@@ -124,15 +131,7 @@
 			pathArr = relPath.split('%2F'),
 			currentLocation = pathArr.slice(-1)[0];
 
-		// if ( path ) {
-
-			var $html = $('<div/>').addClass('breadcrumb-links').append( $('<a href=#>Home</a></div>') );
-
-		// } else {
-
-			// var $html = '<div class="breadcrumb-links">&nbsp;</div>';
-
-		// }
+		var $html = $('<div/>').addClass('breadcrumb-links').append( $('<a href=#>Home</a></div>') );
 
 		$.each(pathArr,function(k,v){
 			if(v) {
