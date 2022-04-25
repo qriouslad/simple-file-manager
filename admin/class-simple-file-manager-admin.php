@@ -204,9 +204,19 @@ class Simple_File_Manager_Admin {
 
 			if ( isset( $_REQUEST['file'] ) ) {
 
-				$file_path = sanitize_text_field( $_REQUEST['file'] );
+				$file_path = sanitize_url( $_REQUEST['file'] );
 
-				$file = $file_path ? $file_path : $abspath;
+				$relpath = str_replace( ABSPATH, '', $file_path );
+
+				if ( !empty( $file_path ) ) {
+
+					$file = $file_path;
+
+				} else {
+
+					$file = $abspath;
+
+				}
 
 			} else {
 
@@ -230,81 +240,85 @@ class Simple_File_Manager_Admin {
 
 					$n = 0;
 
-					foreach ($files as $entry) if (!$this->sfm_is_entry_ignored($entry, $allow_show_folders, $hidden_patterns)) {
+					foreach ($files as $entry) {
 
-						$i = $directory . '/' . $entry;
-						$path = preg_replace('@^\./@', '', $i);
-						$mime_type = $this->sfm_mime_type( $path );
+						if ( !$this->sfm_is_entry_ignored( $entry, $allow_show_folders, $hidden_patterns ) ) {
 
-						// Check if $path is editable or not
+							$i = $directory . '/' . $entry;
+							$path = preg_replace('@^\./@', '', $i);
+							$mime_type = $this->sfm_mime_type( $path );
 
-						if ( ( strpos( $mime_type, 'text' ) !== false ) || ( strpos( $mime_type, 'php' ) !== false ) || ( strpos( $mime_type, 'json' ) !== false ) || ( strpos( $mime_type, 'html' ) !== false ) || ( strpos( $mime_type, 'empty' ) !== false ) ) {
-							$is_viewable = true;
+							// Check if $path is editable or not
 
-							if ( $this->sfm_is_wpcore_path( $path ) ) {
+							if ( ( strpos( $mime_type, 'text' ) !== false ) || ( strpos( $mime_type, 'php' ) !== false ) || ( strpos( $mime_type, 'json' ) !== false ) || ( strpos( $mime_type, 'html' ) !== false ) || ( strpos( $mime_type, 'empty' ) !== false ) ) {
+								$is_viewable = true;
 
-								if ( strpos( $path, 'wp-config.php' ) !== false ) {
+								if ( $this->sfm_is_wpcore_path( $path ) ) {
 
-									$is_editable = true;
+									if ( strpos( $path, 'wp-config.php' ) !== false ) {
+
+										$is_editable = true;
+
+									} else {
+
+										$is_editable = false;
+
+									}
 
 								} else {
 
-									$is_editable = false;
+									$is_editable = true;
 
 								}
 
 							} else {
+								$is_viewable = false;						
+								$is_editable = false;
+							}
 
-								$is_editable = true;
+							// Check if $path is deletable or not
+
+							if ( ( strpos( $path, 'index.php' ) !== false ) && ( strpos( $path, 'wp-content' ) === false ) ) {
+
+								$is_deletable = false;
+
+							} elseif ( ( strpos( $path, 'index.php' ) !== false ) && ( strpos( $path, 'wp-content' ) !== false ) ) {
+
+								$is_deletable = true;
+
+							} elseif ( $this->sfm_is_wpcore_path( $path ) === false ) {
+
+								$is_deletable = true;
+
+							} else {
+
+								$is_deletable = false;
 
 							}
 
-						} else {
-							$is_viewable = false;						
-							$is_editable = false;
+							$relpath = str_replace( ABSPATH, '', $i );
+							$stat = stat($i);
+
+							$result[] = [
+								'mtime' => $stat['mtime'],
+								'size' => $stat['size'],
+								'name' => basename($i),
+								'path' => $path,
+								'relpath'	=> $relpath,
+								'mime_type'	=> $mime_type,
+								'is_viewable' => $is_viewable,
+								'is_editable' => $is_editable,
+								'is_dir' => is_dir($i),
+								'is_deletable' => $allow_delete && ( (!is_dir($i) && is_writable( $directory ) ) || ( is_dir($i) && is_writable($directory) && $this->sfm_is_recursively_deleteable($i) ) ) && $is_deletable,
+								'deletion_nonce' => $deletion_nonce,
+								'is_readable' => is_readable($i),
+								'is_writable' => is_writable($i),
+								'is_executable' => is_executable($i),
+							];
+
+							$n++;
+
 						}
-
-						// Check if $path is deletable or not
-
-						if ( ( strpos( $path, 'index.php' ) !== false ) && ( strpos( $path, 'wp-content' ) === false ) ) {
-
-							$is_deletable = false;
-
-						} elseif ( ( strpos( $path, 'index.php' ) !== false ) && ( strpos( $path, 'wp-content' ) !== false ) ) {
-
-							$is_deletable = true;
-
-						} elseif ( $this->sfm_is_wpcore_path( $path ) === false ) {
-
-							$is_deletable = true;
-
-						} else {
-
-							$is_deletable = false;
-
-						}
-
-						$relpath = str_replace( ABSPATH, '', $i );
-						$stat = stat($i);
-
-						$result[] = [
-							'mtime' => $stat['mtime'],
-							'size' => $stat['size'],
-							'name' => basename($i),
-							'path' => $path,
-							'relpath'	=> $relpath,
-							'mime_type'	=> $mime_type,
-							'is_viewable' => $is_viewable,
-							'is_editable' => $is_editable,
-							'is_dir' => is_dir($i),
-							'is_deletable' => $allow_delete && ( (!is_dir($i) && is_writable( $directory ) ) || ( is_dir($i) && is_writable($directory) && $this->sfm_is_recursively_deleteable($i) ) ) && $is_deletable,
-							'deletion_nonce' => $deletion_nonce,
-							'is_readable' => is_readable($i),
-							'is_writable' => is_writable($i),
-							'is_executable' => is_executable($i),
-						];
-
-						$n++;
 
 					}
 
@@ -314,28 +328,32 @@ class Simple_File_Manager_Admin {
 						return $f1_key > $f2_key;
 					});
 
+					echo json_encode([
+						'success' => true, 
+						'is_writable' => is_writable($file), 
+						'abspath' => $abspath,
+						'abspath_hash' => $abspath_hash,
+						'results' =>$result
+					]);
+					exit;
+
 				} else {
 
-					$this->sfm_err(412,"Not a Directory");
+					echo json_encode([
+						'success' => false,
+						'abspath' => $abspath,
+						'abspath_hash' => $abspath_hash,
+						'error_message' => '/' . $relpath . ' does not exist.' 
+					]);
+					exit;
 
 				}
-
-				echo json_encode([
-					'success' => true, 
-					'is_writable' => is_writable($file), 
-					'abspath' => $abspath,
-					'abspath_hash' => $abspath_hash,
-					'results' =>$result
-				]);
-				exit;
 
 			} elseif ( ( isset( $_GET['do'] ) ) && ( ( $_GET['do'] == 'view' ) || ( $_GET['do'] == 'edit' ) ) ) {
 
 				// Save edits and return message
 
 				if ( isset( $_POST['submit'] ) && isset( $_POST['_wpnonce'] ) ) {
-
-					$current_content = file_get_contents( $file );
 
 					$new_content = wp_unslash( $_POST['editor-content'] );
 
@@ -535,11 +553,11 @@ class Simple_File_Manager_Admin {
 
 				if ( !empty( $nonce ) && wp_verify_nonce( $nonce, 'upload-file_' . $_COOKIE['_sfm_xsrf'] . $uid ) ) {
 
-					$file_name = basename( $_FILES['new-upload']['name'] );
+					$file_name = sanitize_file_name( basename( $_FILES['new-upload']['name'] ) );
 
 					// Hash of folder location where file upload was initiated
 					// Includes the '#' symbol in front
-					$origin_hash = $_POST['url-hash'];
+					$origin_hash = sanitize_url( $_POST['url-hash'] );
 
 					// e.g. /home/root/path/wp-content/uploads/temp/
 					$upload_dir = urldecode( str_replace( '#', '', $origin_hash ) ) . '/';
@@ -550,6 +568,7 @@ class Simple_File_Manager_Admin {
 					// Move file from temporary storage to the new path
 					move_uploaded_file( $_FILES['new-upload']['tmp_name'], $new_file_path );
 
+					// Redirect back to folder where upload was initiated
 					$redirect_url = get_site_url() . '/wp-admin/tools.php?page=' . $this->plugin_name . $origin_hash;
 
 					wp_safe_redirect( $redirect_url );
@@ -628,7 +647,7 @@ class Simple_File_Manager_Admin {
 									<th><span>Name</span></th>
 									<th class="th-actions"><span>Actions</span></th>
 									<th><span>Size</span></th>
-									<th><span>Modified</span></th>
+									<th><span>Last Modified</span></th>
 									<th><span>Permissions</span></th>
 								</tr></thead><tbody id="list"></tbody></table>';
 
